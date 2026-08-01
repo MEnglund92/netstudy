@@ -297,7 +297,65 @@
     { p: 'find', d: 'Searches for files and directories in a directory tree.', o: { '-name P': 'Match filename pattern', '-iname P': 'Case-insensitive match', '-type f': 'Only files', '-type d': 'Only directories', '-size +N': 'Larger than N', '-perm MODE': 'Match permissions', '-exec CMD {} ;': 'Run a command on each hit', '-ls': 'List like ls -l' } },
     { p: 'line', d: 'Enters configuration mode for a terminal line (console, vty, aux) to set login and timeout settings.' },
     { p: 'export PATH=.:$PATH', d: 'Adds the current directory to PATH so commands in it can be run directly.' },
-    { p: 'exec', d: 'Redirects a file descriptor for the current shell (e.g. exec 3</etc/passwd opens fd 3 for reading).' }
+    { p: 'exec', d: 'Redirects a file descriptor for the current shell (e.g. exec 3</etc/passwd opens fd 3 for reading).' },
+
+    // ===== GO TOOLCHAIN =====
+    { p: 'go', d: 'Go toolchain: build, run, and manage Go programs and modules.', o: { 'run': 'Compile and run', 'build': 'Compile to binary', 'test': 'Run tests', 'vet': 'Static analysis', 'fmt': 'Format source', 'clean': 'Remove build cache' } },
+    { p: 'go run', d: 'Compiles and runs a Go program without leaving a binary.' },
+    { p: 'go build', d: 'Compiles a Go program into an executable.', o: { '-o NAME': 'Output filename' } },
+    { p: 'go test', d: 'Runs Go unit tests in the current package/module.', o: { '-v': 'Verbose', '-cover': 'Show coverage' } },
+    { p: 'go mod', d: 'Manages Go modules (dependency files).', o: { 'init MOD': 'Start a module', 'tidy': 'Sync dependencies', 'vendor': 'Vendor deps' } },
+    { p: 'go get', d: 'Adds a package to the current Go module as a dependency.' },
+    { p: 'go install', d: 'Compiles and installs a Go package/binary.' },
+    { p: 'go vet', d: 'Reports suspicious Go code patterns (static analysis).' },
+    { p: 'go fmt', d: 'Formats Go source files to the canonical style.' },
+    { p: 'go clean', d: 'Removes build artifacts and the build cache.', o: { '-cache': 'Clear the cache' } },
+
+    // ===== AWS CLI =====
+    { p: 'aws', d: 'AWS command-line interface for managing cloud resources.', o: { 'configure': 'Set credentials', 'sts get-caller-identity': 'Show current identity' } },
+    { p: 'aws ec2', d: 'AWS EC2: manage virtual servers and VPCs.', o: { 'describe-vpcs': 'List VPCs', 'create-vpc': 'Create a VPC', 'create-subnet': 'Create a subnet', 'create-route': 'Add a route', 'attach-internet-gateway': 'Attach an IGW', 'create-security-group': 'Create a security group', '--region R': 'Target region' } },
+
+    // ===== ANSIBLE =====
+    { p: 'ansible', d: 'Ansible automation: run ad-hoc commands and modules over SSH.', o: { '-m MOD': 'Module to run', '-u USER': 'Remote user', '-kK': 'Ask password + become', '--version': 'Show version' } },
+    { p: 'ansible-playbook', d: 'Runs an Ansible playbook (YAML automation).', o: { '-i INV': 'Inventory file', '-v': 'Verbose', '-e K=V': 'Extra variable', '--ask-vault-pass': 'Prompt for vault password' } },
+    { p: 'ansible-doc', d: 'Shows Ansible module documentation (e.g. ansible-doc copy).' },
+    { p: 'ansible-galaxy', d: 'Manages Ansible roles and collections.', o: { 'install ROLE': 'Install a role', 'init NAME': 'Create a role' } },
+    { p: 'ansible-vault', d: 'Encrypts and decrypts Ansible secrets.', o: { 'encrypt FILE': 'Encrypt a file', 'decrypt FILE': 'Decrypt a file' } },
+
+    // ===== TERRAFORM =====
+    { p: 'terraform', d: 'Hashicorp infrastructure-as-code tool.', o: { 'init': 'Initialize providers', 'plan': 'Preview changes', 'apply': 'Apply changes', 'validate': 'Validate config', 'refresh': 'Sync state', 'destroy': 'Tear down', '-out FILE': 'Save plan', '-help': 'Show help' } },
+
+    // ===== LINUX TOOLS =====
+    { p: 'grep', d: 'Searches text for matching patterns (regex).', o: { '-i': 'Case-insensitive', '-r': 'Recursive', '-l': 'Only filenames', '-v': 'Invert (exclude matches)', '-n': 'Line numbers', '-c': 'Count matches', '--color': 'Highlight matches' } },
+    { p: 'ps', d: 'Lists running processes.', o: { 'aux': 'All processes (BSD)', '-ef': 'Full list (SysV)', '-eo F1,F2': 'Custom fields (pid,user,vsz,rss,comm)', '--sort=-X': 'Sort descending by field', '| less': 'Page output' } },
+    { p: 'kill', d: 'Sends a signal to a process by PID.', o: { '-9': 'SIGKILL (force)', '-1': 'SIGHUP (reload)', '-15': 'SIGTERM (graceful)' } },
+    { p: 'tree', d: 'Displays a directory tree.' },
+    { p: 'useradd', d: 'Creates a new Linux user account.' },
+    { p: 'groupadd', d: 'Creates a new Linux group.' },
+    { p: 'usermod', d: 'Modifies a Linux user account (groups, shell, home).' },
+    { p: 'passwd', d: 'Sets or changes a user password.' },
+    { p: 'scp', d: 'Securely copies files between hosts over SSH.' },
+    { p: 'make', d: 'Builds a project using a Makefile.', o: { 'TARGET': 'Build a specific target' } },
+    { p: 'pip3 install', d: 'Installs a Python package (pip3/pip).' },
+    { p: 'node', d: 'Runs JavaScript/Node.js code.', o: { '-e CMD': 'Run a command string' } },
+
+    // ===== NETWORK MANAGEMENT (VPN / SNMP / NTP / LOGGING) =====
+    { p: 'crypto isakmp', d: 'Configures IKE (ISAKMP) for IPsec VPNs.', o: { 'policy N': 'IKE policy', 'key KEY address IP': 'Pre-shared key per peer' } },
+    { p: 'crypto ipsec transform-set', d: 'Defines the IPsec encryption/integrity algorithms (e.g. esp-aes esp-sha-hmac).' },
+    { p: 'crypto ipsec profile', d: 'Creates an IPsec profile used as a tunnel protection template.' },
+    { p: 'crypto map', d: 'Defines a crypto map tying IPsec profiles to traffic (ACLs).', o: { 'N ipsec-isakmp': 'Map entry using IKE' } },
+    { p: 'snmp-server', d: 'Configures the SNMP agent on the device.', o: { 'community STR': 'Community string', 'location TEXT': 'Location string', 'contact TEXT': 'Contact string', 'host IP': 'Trap destination' } },
+    { p: 'ntp server', d: 'Sets an NTP time server to keep the device clock synced.' },
+    { p: 'ntp source', d: 'Sets the source interface for NTP packets.' },
+    { p: 'logging', d: 'Configures logging (syslog).', o: { 'host IP': 'Log to a syslog server', 'buffered N': 'Buffer size' } },
+    { p: 'username', d: 'Creates a local user account (e.g. username Bob secret cisco).' },
+    { p: 'netconf', d: 'NETCONF: network-management protocol (RFC 6241) using XML over SSH.' },
+    { p: 'restconf', d: 'RESTCONF: HTTP/REST interface to YANG datastores.' },
+    { p: 'jq', d: 'Parses and filters JSON from the command line.', o: { '.key': 'Select a field', '-r': 'Raw output' } },
+
+    // ===== AAA AUTHORIZATION =====
+    { p: 'aaa authorization commands', d: 'Authorizes command execution per privilege level. Syntax: aaa authorization commands <level> default group <server-group>.' },
+    { p: 'aaa authorization exec', d: 'Authorizes EXEC session access. Syntax: aaa authorization exec default group <server-group>.' }
   ];
 
   window.cliCommandHelp = HELP;
