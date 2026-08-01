@@ -155,7 +155,7 @@ let showQuizTrans = false;
 let quizTypeMode = false; let quizReverse = false;
 let flashTrans = false;
 let flashCategory = 'all';
-let matchLeft = []; let matchRight = []; let matchSelected = null; let matchTrans = false;
+let matchLeft = []; let matchRight = []; let matchSelected = null; let matchTrans = false; let matchWrong = null; let matchWrongTimer = null;
 
 function getActiveData() { return currentCourse===-1 ? courses.flatMap(c=>c.entries) : courses[currentCourse].entries; }
 function getActiveCats() { return currentCourse===-1 ? [...new Map(courses.flatMap(c=>c.categories).map(c=>[c.id,c])).values()] : courses[currentCourse].categories; }
@@ -275,6 +275,13 @@ function getScoreMessage(pct){
 function announce(msg){
   const live = document.getElementById('appLive');
   if(live) live.textContent = msg;
+}
+const homeBtn = document.getElementById('homeBtn');
+if(homeBtn){
+  homeBtn.addEventListener('click',()=>{
+    const welcomeTab = document.querySelector('.tab[data-tab="welcome"]');
+    if(welcomeTab) welcomeTab.click();
+  });
 }
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
@@ -609,7 +616,7 @@ function renderQuiz(){
   const letters = ['A','B','C','D'];
 
   if(quizTypeMode){
-    container.innerHTML = '<div class="quiz-type-wrap"><input id="quizTypeInput" type="text" placeholder="'+escapeHtml(quizReverse?'Type the phrase…':'Type the meaning…')+'" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="quizTypeSubmit" class="action-btn" type="button">Submit</button></div><div class="quiz-type-result" id="quizTypeResult"></div>';
+    container.innerHTML = '<div class="quiz-type-wrap"><input id="quizTypeInput" type="text" placeholder="'+escapeHtml(quizReverse?'Type the phrase…':'Type the meaning…')+'" autocomplete="off"            autocapitalize="off" spellcheck="false"><button id="quizTypeSubmit" class="action-btn primary"                       type="button">Submit</button></div><div class="quiz-type-result" id="quizTypeResult"></div>';
     const input = document.getElementById('quizTypeInput');
     const submit = document.getElementById('quizTypeSubmit');
     const checkType = ()=>{
@@ -746,7 +753,9 @@ function initMatch(){
   matchRight = chosen.map(i=>({text:data[i].meaning,id:i,paired:false,item:data[i]}));
   shuffleArray(matchRight);
   matchSelected=null;
+  matchWrong=null; if(matchWrongTimer){clearTimeout(matchWrongTimer);matchWrongTimer=null;}
   document.getElementById('matchStatus').textContent = '0 / '+size+' matched';
+  document.getElementById('matchStatus').className = '';
   document.getElementById('matchResult').classList.remove('show');
   renderMatch();
 }
@@ -755,12 +764,14 @@ function renderMatch(){
   document.getElementById('matchLeft').innerHTML = '<h3>Phrases</h3>'+matchLeft.map((m,i)=>{
     let cls = m.matched?'match-item matched':'match-item';
     if(matchSelected&&matchSelected.side==='left'&&matchSelected.idx===i) cls+=' selected';
+    if(matchWrong&&matchWrong.li===i) cls+=' wrong';
     const sub = m.item.translation;
     return '<div class="'+cls+'" data-side="left" data-idx="'+i+'" data-id="'+m.id+'">'+m.text+'<div class="sub'+(matchTrans?' show':'')+'">'+sub+'</div></div>';
   }).join('');
   document.getElementById('matchRight').innerHTML = '<h3>Meanings</h3>'+matchRight.map((m,i)=>{
     let cls = m.paired?'match-item matched':'match-item';
     if(matchSelected&&matchSelected.side==='right'&&matchSelected.idx===i) cls+=' selected';
+    if(matchWrong&&matchWrong.ri===i) cls+=' wrong';
     const sub = m.item.translationSv || m.item.translation;
     return '<div class="'+cls+'" data-side="right" data-idx="'+i+'" data-id="'+m.id+'">'+m.text+'<div class="sub'+(matchTrans?' show':'')+'">'+sub+'</div></div>';
   }).join('');
@@ -803,10 +814,17 @@ function handleMatchClick(side,idx,id){
     if(matchLeft[li].id===matchRight[ri].id){
       matchLeft[li].matched=true;matchRight[ri].paired=true;
     } else {
-      const el = document.querySelector('.match-item[data-side="right"][data-idx="'+ri+'"]');
-      if(el){el.classList.add('wrong');setTimeout(()=>el.classList.remove('wrong'),400);}
-      const el2 = document.querySelector('.match-item[data-side="left"][data-idx="'+li+'"]');
-      if(el2){el2.classList.add('wrong');setTimeout(()=>el2.classList.remove('wrong'),400);}
+      matchWrong = {li,ri};
+      const st = document.getElementById('matchStatus');
+      st.textContent = '✗ Wrong pair — try again';
+      st.className = 'match-status match-status-wrong';
+      if(matchWrongTimer) clearTimeout(matchWrongTimer);
+      matchWrongTimer = setTimeout(()=>{
+        matchWrong = null; matchWrongTimer = null;
+        st.textContent = matchLeft.filter(m=>m.matched).length+' / '+matchLeft.length+' matched';
+        st.className = 'match-status';
+        renderMatch();
+      }, 900);
     }
     matchSelected=null;
     renderMatch();
@@ -1003,25 +1021,22 @@ function renderDashboard(){
     '<div class="dash-hero-stat"><span class="dash-hero-val">'+combAvg+'%</span><span class="dash-hero-lbl">Avg Score</span></div>'+
   '</div></div>';
 
-  html += '<div class="dash-course-grid">';
+  html += '<div class="dash-course-table"><table><thead><tr>'+
+    '<th>Course</th><th>Status</th><th>Quizzes</th><th>Best</th><th>Average</th><th>Correct</th><th>Match</th>'+
+    '</tr></thead><tbody>';
   courses.forEach(c => {
     const s = allStats[c.id]; const q = s.quiz;
     const total = q.totalCorrect+q.totalIncorrect;
     const avg = total>0 ? Math.round(q.totalCorrect/total*100) : 0;
     const st = q.taken===0 ? 'Not Started' : (avg>=80 ? 'Mastered' : (avg>=50 ? 'In Progress' : 'Needs Review'));
-    const sc = q.taken===0 ? '#666' : (avg>=80 ? '#2e7d32' : (avg>=50 ? '#f57f17' : '#c62828'));
-    html += '<div class="dash-card" style="border-left-color:'+sc+'"><div class="dash-header"><h3>'+
-      c.name.replace('Kurs ','K')+'</h3><span class="dash-course-status" style="background:'+sc+'">'+st+'</span></div>'+
-      '<div class="dash-card-body">'+
-      '<div class="dash-metric"><span class="dash-metric-lbl">Quizzes</span><span class="dash-metric-val">'+q.taken+'</span></div>'+
-      '<div class="dash-metric"><span class="dash-metric-lbl">Best</span><span class="dash-metric-val">'+q.best+'%</span></div>'+
-      '<div class="dash-metric"><span class="dash-metric-lbl">Average</span><span class="dash-metric-val">'+avg+'%</span></div>'+
-      '<div class="dash-metric"><span class="dash-metric-lbl">Correct</span><span class="dash-metric-val">'+q.totalCorrect+'/'+total+'</span></div>'+
-      '<div class="dash-metric"><span class="dash-metric-lbl">Match</span><span class="dash-metric-val">'+s.match.rounds+'</span></div>'+
-      '<div class="dash-bar" style="margin-top:8px"><div style="width:'+avg+'%;background:'+sc+'"></div></div>'+
-    '</div></div>';
+    const sc = q.taken===0 ? 'var(--text-sub)' : (avg>=80 ? 'var(--success)' : (avg>=50 ? '#f57f17' : 'var(--error)'));
+    html += '<tr>'+
+      '<td class="dash-t-course">'+c.name.replace('Kurs ','K')+'</td>'+
+      '<td><span class="dash-course-status" style="background:'+sc+'">'+st+'</span></td>'+
+      '<td>'+q.taken+'</td><td>'+q.best+'%</td><td>'+avg+'%</td>'+
+      '<td>'+q.totalCorrect+'/'+total+'</td><td>'+s.match.rounds+'</td></tr>';
   });
-  html += '</div>';
+  html += '</tbody></table></div>';
 
   html += '<div style="text-align:center;margin-top:18px"><button class="dash-reset-btn" id="resetStatsBtn">Reset All Data</button></div>';
 
@@ -1139,12 +1154,12 @@ function renderCourseContent(){
     const renderTopic = () => {
     const txtHtml = formatConceptText(t.txt);
     const txtSvHtml = formatConceptText(t.txtSv);
-    const html = '<div class="concept-card"><div class="concept-header"><h2>'+t.title+'</h2><button id="translateBtn" class="match-trans-btn">Show Translation</button><div class="topic-sub">Course Content</div></div>'+
+    const html = '<div class="concept-card"><div class="concept-header"><h2>'+t.title+'</h2><button id="translateBtn" class="concept-trans-btn" type="button">Show Translation</button><div class="topic-sub">Course Content</div></div>'+
       '<div class="concept-body-wrap"><div class="concept-body">'+txtHtml+
       (t.txt ? '<button class="speak-btn concept-speak" data-text="'+escapeHtml(stripHtml(t.txt))+'" type="button" title="Pronounce" aria-label="Pronounce">\ud83d\udd0a Read Aloud</button>' : '')+
-      '<div class="concept-translation" style="display:none">'+txtSvHtml+
+      '<div class="concept-translation"><h4>Swedish Translation</h4><div class="concept-translation-body">'+txtSvHtml+
       (t.txtSv ? '<button class="speak-btn concept-speak" data-text="'+escapeHtml(stripHtml(t.txtSv))+'" type="button" title="Pronounce" aria-label="Pronounce">\ud83d\udd0a L\u00e4s h\u00f6gt</button>' : '')+
-      '</div></div>'+
+      '</div></div></div>'+
       renderDeepDive(t.sections)+
       (t.svg ? '<div class="concept-svg-wrap">'+t.svg+'</div>' : '')+
       '</div>'+
@@ -1160,10 +1175,10 @@ function renderCourseContent(){
       transBtn.addEventListener('click',()=>{
         const td = content.querySelector('.concept-translation');
         if(td){
-          const h = td.style.display==='none';
-          td.style.display = h ? 'block' : 'none';
-          transBtn.textContent = h ? 'Hide Translation' : 'Show Translation';
-          transBtn.classList.toggle('active',h);
+          const show = !td.classList.contains('show');
+          td.classList.toggle('show',show);
+          transBtn.textContent = show ? 'Hide Translation' : 'Show Translation';
+          transBtn.classList.toggle('active',show);
         }
       });
     }

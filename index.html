@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#050508">
-<meta name="description" content="NetStudy — CCNA network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams, XP and streaks.">
+<meta name="description" content="NetStudy — network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams, XP and streaks.">
 <title>NetStudy</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
@@ -19,10 +19,10 @@
 
   <aside class="side-bar" aria-label="Sidebar">
     <div class="side-inner">
-      <div class="avatar" aria-hidden="true">NS</div>
+      <button class="avatar" id="homeBtn" type="button" title="Go to Browse (front page)" aria-label="Go to Browse (front page)">NS</button>
       <div class="side-nameplate">
         <span class="side-title">NetStudy</span>
-        <span class="side-sub">CCNA Study App</span>
+        <span class="side-sub">Network Study App</span>
       </div>
       <div class="course-select-wrap side-course">
         <label class="side-label" for="courseSelect">Course</label>
@@ -31,7 +31,8 @@
     </div>
 
     <nav class="tabs side-tabs" role="tablist" aria-label="Application tabs">
-      <button class="tab active" data-tab="browse" role="tab" aria-selected="true" aria-controls="tab-browse" title="Search and filter all glossary terms">🔍 Browse</button>
+      <button class="tab active" data-tab="welcome" role="tab" aria-selected="true" aria-controls="tab-welcome" title="Welcome page: what this app is and how to use it">🏠 Home</button>
+      <button class="tab" data-tab="browse" role="tab" aria-selected="false" aria-controls="tab-browse" title="Search and filter all glossary terms">🔍 Browse</button>
       <button class="tab" data-tab="flash" role="tab" aria-selected="false" aria-controls="tab-flash" title="Flip through terms as flashcards">🃏 Flashcards</button>
       <button class="tab" data-tab="quiz" role="tab" aria-selected="false" aria-controls="tab-quiz" title="Multiple-choice quiz on the glossary">❓ Quiz</button>
       <button class="tab" data-tab="match" role="tab" aria-selected="false" aria-controls="tab-match" title="Drag terms to their translations against the clock">🎯 Match</button>
@@ -57,7 +58,7 @@
 
   <header>
     <div class="header-glass">
-      <h1><span class="header-name-plate">NetStudy</span><span class="header-subtitle">CCNA Study App</span></h1>
+      <h1><span class="header-name-plate">NetStudy</span><span class="header-subtitle">Network Study App</span></h1>
       <div class="header-divider"></div>
       <button id="themeToggle" class="theme-btn" type="button" aria-label="Toggle theme">🌙 Dark</button>
     </div>
@@ -66,8 +67,58 @@
   <div class="tab-container">
     <div id="appLive" class="visually-hidden" role="status" aria-live="polite"></div>
 
+    <!-- WELCOME -->
+    <section class="tab-panel active" id="tab-welcome" role="tabpanel">
+      <div class="welcome-wrap">
+        <header class="welcome-hero">
+          <h1 class="welcome-title">NetStudy</h1>
+          <p class="welcome-subtitle">Your offline network-engineering study companion — built from your own course books.</p>
+          <p class="welcome-lede">Every card in this app is extracted from the textbooks used in your Swedish network-engineering education. That means the vocabulary, commands and troubleshooting scenarios match your syllabus exactly — no generic decks that don't fit the course.</p>
+          <div class="welcome-stats" aria-label="Study content overview">
+            <div class="welcome-stat"><span class="welcome-stat-num">11,667</span><span class="welcome-stat-lbl">Study assets</span></div>
+            <div class="welcome-stat"><span class="welcome-stat-num">5,320</span><span class="welcome-stat-lbl">CLI commands</span></div>
+            <div class="welcome-stat"><span class="welcome-stat-num">158</span><span class="welcome-stat-lbl">Topics</span></div>
+            <div class="welcome-stat"><span class="welcome-stat-num">84</span><span class="welcome-stat-lbl">Concept pages</span></div>
+            <div class="welcome-stat"><span class="welcome-stat-num">14</span><span class="welcome-stat-lbl">Study modes</span></div>
+          </div>
+        </header>
+
+        <section class="welcome-section">
+          <h2 class="welcome-h2">What you can do here</h2>
+          <div class="welcome-cards">
+            <div class="welcome-card"><span class="welcome-ico">🔍</span><h3>Browse</h3><p>Search and filter every glossary term across all courses.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">🃏</span><h3>Flashcards</h3><p>Flip through Q&amp;A definition cards, with optional audio.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">❓</span><h3>Quiz</h3><p>Multiple-choice questions with instant scoring.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">🎯</span><h3>Match</h3><p>Drag terms to their translations against the clock.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">📖</span><h3>Study</h3><p>Spaced repetition (SM-2) across every card type — the app remembers what you know.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">🔁</span><h3>Weak Words</h3><p>Review exactly the cards you keep getting wrong.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">💻</span><h3>CLI Lab</h3><p>Practice real commands: fill-in, study mode, and step-by-step typing for beginners.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">📚</span><h3>Concepts</h3><p>Deep-dive pages with Swedish text, diagrams and key takeaways per topic.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">📎</span><h3>Resources</h3><p>Open or download the PDFs, audio and links behind the content.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">📝</span><h3>Exam</h3><p>Timed glossary exam per course or mixed — pass mark 85%.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">🧠</span><h3>Recall Exam</h3><p>Timed recall exam over the full active-recall card bank.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">📊</span><h3>Compare</h3><p>Side-by-side comparisons of protocols and standards.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">🔧</span><h3>Diagnosis</h3><p>Symptom → command → fix tables, plus practice with explanations.</p></div>
+            <div class="welcome-card"><span class="welcome-ico">📈</span><h3>Dashboard</h3><p>Your progress: SM-2 mastery, streaks, XP and weakest topics.</p></div>
+          </div>
+        </section>
+
+        <section class="welcome-section">
+          <h2 class="welcome-h2">A good way to get started</h2>
+          <ol class="welcome-flow">
+            <li><strong>Pick your course</strong> in the sidebar so Browse, Exam and Match use the right content.</li>
+            <li><strong>Study</strong> every day — SM-2 spaced repetition schedules your cards so you review what you're about to forget.</li>
+            <li>Use <strong>Weak Words</strong> to close your personal knowledge gaps.</li>
+            <li>Finish with the <strong>Exam</strong> or <strong>Recall Exam</strong> (pass = 85%) to see if you're ready.</li>
+            <li>Learn commands in the <strong>CLI Lab</strong> and check symptoms in <strong>Diagnosis</strong> before the lab exam.</li>
+          </ol>
+          <p class="welcome-note">Progress is saved in your browser (localStorage). Switch courses any time — your SM-2 history is kept per card, not per course.</p>
+        </section>
+      </div>
+    </section>
+
     <!-- BROWSE -->
-    <section class="tab-panel active" id="tab-browse" role="tabpanel">
+    <section class="tab-panel" id="tab-browse" role="tabpanel">
       <input type="search" class="search-box" id="searchBox" placeholder="Search network terms..." aria-label="Search vocabulary">
       <div class="filter-row" id="filterRow" role="group" aria-label="Category filters"></div>
       <div class="count-label" id="countLabel" aria-live="polite">Showing 0 items</div>
@@ -213,7 +264,7 @@
             <option value="troubleshooting">Troubleshooting only</option>
             <option value="cloze">CLI only</option>
           </select>
-          <button id="ssnStartBtn" class="action-btn" type="button">Start</button>
+          <button id="ssnStartBtn" class="action-btn primary" type="button">Start</button>
         </div>
       </div>
       <div id="studyArea" style="display:none">
@@ -249,9 +300,26 @@
       <div id="weakLoading" class="data-status" style="display:none">Loading study data…</div>
       <div id="weakArea">
         <div class="weak-head">
-          <p class="weak-intro">Cards your SM-2 profile rates as weakest (ease factor &lt; 2.0 or repeatedly missed). Practice them to push the ease factor back up.</p>
+          <p class="weak-intro">Cards your SM-2 profile rates as weakest (ease factor &lt; 2.0 or repeatedly missed). Choose what to practice, then start.</p>
           <div class="flash-controls" role="group" aria-label="Weak words settings">
-            <button id="weakStartBtn" class="action-btn" type="button">▶ Practice Weak Words</button>
+            <label for="weakDomain">Area:</label>
+            <select id="weakDomain" aria-label="Filter weak words by area"></select>
+            <label for="weakCount">Cards:</label>
+            <select id="weakCount" aria-label="Number of weak cards">
+              <option value="10">10 cards</option>
+              <option value="20" selected>20 cards</option>
+              <option value="0">All weak</option>
+            </select>
+            <label for="weakMix">Mix:</label>
+            <select id="weakMix" aria-label="Card type mix">
+              <option value="mixed">Mixed Types</option>
+              <option value="flashcard">Flashcard only</option>
+              <option value="discrimination">Discrimination only</option>
+              <option value="ordering">Ordering only</option>
+              <option value="troubleshooting">Troubleshooting only</option>
+              <option value="cloze">CLI only</option>
+            </select>
+            <button id="weakStartBtn" class="action-btn primary" type="button">▶ Practice Weak Words</button>
             <button id="weakResetBtn" class="dash-reset-btn" type="button">Reset Weak Words</button>
           </div>
         </div>
@@ -288,14 +356,16 @@
     <!-- CLI LAB -->
     <section class="tab-panel" id="tab-cli" role="tabpanel">
       <div id="cliLoading" class="data-status" style="display:none">Loading CLI commands…</div>
-      <div class="cli-controls">
-        <span id="cliTotal" class="cli-total">0 CLI cards</span>
-        <button id="cliStudyBtn" class="action-btn" type="button">📖 Study Mode</button>
-        <button id="cliHelpBtn" class="action-btn" type="button">❓ Help</button>
-        <button id="cliListBtn" class="action-btn" type="button">📋 All Commands</button>
-        <button id="cliShuffleBtn" class="action-btn" type="button">Shuffle</button>
-        <button id="cliToggleBtn" class="action-btn" type="button">Show Answer</button>
-      </div>
+        <div class="cli-controls">
+          <span id="cliTotal" class="cli-total">0 CLI cards</span>
+          <button id="cliStudyBtn" class="action-btn" type="button">📖 Study Mode</button>
+          <button id="cliStepBtn" class="action-btn" type="button">👣 Step Mode</button>
+          <button id="cliHelpBtn" class="action-btn" type="button">❓ Help</button>
+          <button id="cliListBtn" class="action-btn" type="button">📋 All Commands</button>
+          <button id="cliShuffleBtn" class="action-btn" type="button">Shuffle</button>
+          <button id="cliToggleBtn" class="action-btn" type="button">Show Answer</button>
+          <button id="cliHintBtn" class="action-btn" type="button">💡 Hint</button>
+        </div>
       <div class="cli-help" id="cliHelp" style="display:none">
         <strong>How the CLI Lab works</strong>
         <ul>
@@ -324,6 +394,8 @@
             <span class="cli-prefix" id="cliPrefix">R1#</span>
             <input type="text" id="cliInput" class="cli-input" autocomplete="off" spellcheck="false" placeholder="Type command here...">
           </div>
+          <div class="cli-suggest" id="cliSuggest"></div>
+          <div class="cli-slots" id="cliSlots" style="display:none"></div>
           <div class="cli-feedback" id="cliFeedback"></div>
           <div class="cli-answer" id="cliAnswer" style="display:none"></div>
           <div class="cli-explanation" id="cliExplanation" style="display:none"></div>
@@ -447,7 +519,7 @@
           </select>
           <label for="exDomain">Focus:</label>
           <select id="exDomain"><option value="">All Domains</option></select>
-          <button id="exStartBtn" class="action-btn" type="button">Start Exam</button>
+          <button id="exStartBtn" class="action-btn primary" type="button">Start Exam</button>
         </div>
       </div>
       <div id="exArea" style="display:none">
@@ -490,7 +562,25 @@
       <div id="diagLoading" class="data-status" style="display:none">Loading diagnosis data…</div>
       <div class="diag-tools">
         <input type="search" class="search-box" id="diagSearch" placeholder="Filter symptoms, commands, fixes..." aria-label="Search diagnosis tables">
+        <select class="concept-select" id="diagTopic" aria-label="Filter diagnosis by topic"></select>
         <button class="trans-btn" id="diagModeBtn" type="button" title="Show or hide the show-command column">Hide Commands</button>
+        <button class="action-btn primary" id="diagPracticeBtn" type="button">▶ Practice Commands</button>
+      </div>
+      <div id="diagPractice" style="display:none">
+        <div class="flash-progress">
+          <span id="dpIdx">0</span>
+          <div class="bar-wrap"><div class="bar-fill" id="dpBar" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
+          <span id="dpTotal">0</span>
+        </div>
+        <div class="dp-card recall-card" id="dpCard"></div>
+        <div class="ssn-nav">
+          <button id="dpPrevBtn" class="action-btn" type="button">◀ Prev</button>
+          <button id="dpRevealBtn" class="action-btn primary" type="button">Reveal Command</button>
+          <button id="dpNextBtn" class="action-btn" type="button">Next ▶</button>
+        </div>
+        <div class="ssn-nav">
+          <button id="dpExitBtn" class="dash-reset-btn" type="button">← Back to Diagnosis</button>
+        </div>
       </div>
       <div id="diagContent"></div>
     </section>
@@ -541,6 +631,7 @@
 </div>
 <script src="data/ccna_glossary_data.js"></script>
 <script src="data/ccna_concepts.js"></script>
+<script src="data/cli_command_help.js"></script>
 <script src="app.js" defer></script>
 <script src="study.js" defer></script>
 <script src="statsbar.js" defer></script>

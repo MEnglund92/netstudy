@@ -74,6 +74,57 @@
   }
   function getExplain(c) { return text(c.explanation || c.hint || ''); }
 
+  // Look up a command in the curated CLI help dictionary.
+  // Strategy: exact match -> prefix match (longest pattern wins) -> token subsequence -> null.
+  function cliExplain(cmd) {
+    var dict = (window.cliCommandHelp && window.cliCommandHelp.length) ? window.cliCommandHelp : null;
+    if (!dict || !cmd) return null;
+    var clean = String(cmd).replace(/<br\s*\/?>/gi, '\n').split('\n')[0]
+      .replace(/["'`]+/g, '').replace(/\s+/g, ' ').trim();
+    if (!clean) return null;
+    var low = clean.toLowerCase();
+    var toks = clean.split(' ');
+    var best = null, bestScore = 0;
+    for (var i = 0; i < dict.length; i++) {
+      var e = dict[i], p = String(e.p).toLowerCase(), score = 0;
+      if (low === p) {
+        score = 10000;
+      } else if (low.indexOf(p) === 0) {
+        var after = low.charAt(p.length);
+        if (after === '' || after === ' ') score = 8000 + p.length;
+      } else {
+        var pt = p.split(' ');
+        if (pt.length >= 2 && toks.length >= pt.length) {
+          var ti = 0, ok = true;
+          for (var j = 0; j < pt.length && ok; j++) {
+            var found = false;
+            for (; ti < toks.length; ti++) {
+              if (toks[ti].toLowerCase() === pt[j]) { found = true; ti++; break; }
+            }
+            if (!found) ok = false;
+          }
+          if (ok) score = 7000 + p.length;
+        }
+      }
+      if (score > bestScore) { bestScore = score; best = e; }
+    }
+    return best ? { d: best.d, o: best.o } : null;
+  }
+  function cliHelpHtml(cmd) {
+    var x = cliExplain(cmd);
+    if (!x) return '';
+    var html = '<div class="cli-about"><div class="cli-about-head"><span class="cli-about-ico">ℹ️</span><span>About this command</span></div><div class="cli-about-body">' + esc(x.d);
+    if (x.o) {
+      html += '<div class="cli-about-opts">';
+      for (var k in x.o) {
+        if (Object.prototype.hasOwnProperty.call(x.o, k)) html += '<div class="cli-about-opt"><code>' + esc(k) + '</code><span>' + esc(x.o[k]) + '</span></div>';
+      }
+      html += '</div>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
   // ===== SM-2 STORAGE =====
   function sm2Key(k) { return 'ar_sm2_' + k; }
   function loadSm2(q) { try { return JSON.parse(localStorage.getItem(sm2Key(q))); } catch (e) { return null; } }
@@ -612,8 +663,25 @@
       }).join('');
   }
 
+  function populateWeakSetup() {
+    var sel = $('weakDomain');
+    if (!sel || sel.options.length) return;
+    var doms = uniq(allCards.map(function (c) { return c.domain; }).filter(Boolean)).sort();
+    sel.innerHTML = '<option value="all">All areas</option>' + doms.map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('');
+  }
   function startWeakPractice() {
-    wQueue = weakCards();
+    var pool = weakCards();
+    var dom = $('weakDomain') ? $('weakDomain').value : 'all';
+    if (dom && dom !== 'all') pool = pool.filter(function (c) { return (c.domain || '') === dom; });
+    var mix = $('weakMix') ? $('weakMix').value : 'mixed';
+    if (mix === 'flashcard') pool = pool.filter(function (c) { return c.asset_type === 'FLASHCARD'; });
+    else if (mix === 'discrimination') pool = pool.filter(function (c) { return c.asset_type === 'DISCRIMINATION'; });
+    else if (mix === 'ordering') pool = pool.filter(function (c) { return c.asset_type === 'ORDERING'; });
+    else if (mix === 'troubleshooting') pool = pool.filter(function (c) { return c.asset_type === 'TROUBLESHOOTING'; });
+    else if (mix === 'cloze') pool = pool.filter(function (c) { return c.asset_type === 'CLOZE_SYNTAX'; });
+    var count = parseInt($('weakCount') ? $('weakCount').value : 0, 10) || 0;
+    if (count > 0) pool = pool.slice(0, count);
+    wQueue = pool;
     if (!wQueue.length) { renderWeak(); return; }
     wIdx = 0; wRatedPos = -1; wAnswered = 0;
     $('weakList').style.display = 'none';
@@ -710,7 +778,8 @@
   });
 
   // ===== CLI LAB =====
-  var cliCards = [], cliIdx = 0, cliStudyMode = false, cliListShown = 50;
+  var cliCards = [], cliIdx = 0, cliStudyMode = false, cliStepMode = false, cliListShown = 50;
+  var cliStepWords = [], cliStepDone = [], cliStepPos = 0;
 
   function cliClean(c) { return cliRenderCmd(c, false); }
   function cliShowAnswer(c) {
@@ -719,18 +788,53 @@
     else { $('cliExplanation').style.display = 'none'; }
   }
   function cliHideAnswer() { $('cliAnswer').style.display = 'none'; $('cliExplanation').style.display = 'none'; }
+  function cliStepWordsOf(cmd) {
+    return cmd.replace(/^\S+\s*[#>]\s*/, '').trim().split(/\s+/).filter(Boolean);
+  }
+  function cliStepReset(c) {
+    cliStepWords = cliStepWordsOf(cliRenderCmd(c, false));
+    cliStepDone = []; cliStepPos = 0;
+    for (var i = 0; i < cliStepWords.length; i++) cliStepDone.push(false);
+  }
+  function cliStepNextUndone() {
+    for (var i = 0; i < cliStepDone.length; i++) if (!cliStepDone[i]) return i;
+    return -1;
+  }
+  function cliStepRenderSlots() {
+    var box = $('cliSlots'); if (!box) return;
+    var html = '<div class="cli-slot-label">Type each word of the command, press <kbd>Enter</kbd> after each word.</div>';
+    for (var i = 0; i < cliStepWords.length; i++) {
+      var cls = '';
+      if (cliStepDone[i]) cls = ' done';
+      else if (i === cliStepPos) cls = ' current';
+      var w = cliStepWords[i];
+      html += '<span class="cli-slot' + cls + '">' +
+        (cliStepDone[i] ? esc(w) : '•'.repeat(Math.max(2, w.length))) + '</span>';
+    }
+    box.innerHTML = html;
+    box.style.display = 'block';
+  }
   function applyCliMode() {
     if (cliCards.length === 0) return;
-    if (cliStudyMode) {
+    var s = $('cliSuggest'); if (s) s.style.display = 'none';
+    if (cliStepMode) {
+      $('cliInput').disabled = false;
+      $('cliInput').placeholder = 'Type word ' + (cliStepPos + 1) + ' of ' + cliStepWords.length + '...';
+      cliHideAnswer();
+      $('cliToggleBtn').textContent = 'Show Answer';
+      cliStepRenderSlots();
+    } else if (cliStudyMode) {
       $('cliInput').disabled = true;
       $('cliInput').placeholder = 'Study mode — answer shown below';
       cliShowAnswer(cliCards[cliIdx]);
       $('cliToggleBtn').textContent = 'Show Answer';
+      if ($('cliSlots')) $('cliSlots').style.display = 'none';
     } else {
       $('cliInput').disabled = false;
       $('cliInput').placeholder = 'Type command here...';
       cliHideAnswer();
       $('cliToggleBtn').textContent = 'Show Answer';
+      if ($('cliSlots')) $('cliSlots').style.display = 'none';
     }
   }
 
@@ -756,6 +860,7 @@
     $('cliInput').value = '';
     $('cliFeedback').textContent = ''; $('cliFeedback').className = 'cli-feedback';
     $('cliToggleBtn').textContent = 'Show Answer';
+    if (cliStepMode) cliStepReset(c);
     applyCliMode();
   }
   $('cliNextBtn').addEventListener('click', function () { cliIdx++; showCliCard(); });
@@ -771,15 +876,108 @@
     }
   });
   $('cliStudyBtn').addEventListener('click', function () {
+    if (cliStepMode) { cliStepMode = false; $('cliStepBtn').classList.remove('active'); $('cliStepBtn').textContent = '👣 Step Mode'; }
     cliStudyMode = !cliStudyMode;
     this.classList.toggle('active', cliStudyMode);
     this.textContent = cliStudyMode ? '✍ Practice Mode' : '📖 Study Mode';
     applyCliMode();
   });
+  $('cliStepBtn').addEventListener('click', function () {
+    if (cliStudyMode) { cliStudyMode = false; $('cliStudyBtn').classList.remove('active'); $('cliStudyBtn').textContent = '📖 Study Mode'; }
+    cliStepMode = !cliStepMode;
+    this.classList.toggle('active', cliStepMode);
+    this.textContent = cliStepMode ? '⚡ Quick Practice' : '👣 Step Mode';
+    var c = cliCards[cliIdx];
+    if (cliStepMode && c) cliStepReset(c);
+    applyCliMode();
+  });
+  function cliStepCheck() {
+    var c = cliCards[cliIdx]; if (!c) return;
+    var input = $('cliInput').value.trim();
+    if (!input) { $('cliInput').focus(); return; }
+    var pos = cliStepNextUndone();
+    if (pos < 0) { applyCliMode(); return; }
+    var w = cliStepWords[pos];
+    if (input.toLowerCase() === w.toLowerCase()) {
+      cliStepDone[pos] = true;
+      $('cliFeedback').textContent = '✓ Word correct! ' + (pos + 1) + ' of ' + cliStepWords.length;
+      $('cliFeedback').className = 'cli-feedback cli-correct';
+      $('cliInput').value = '';
+      var nxt = cliStepNextUndone();
+      if (nxt < 0) {
+        cliStepPos = cliStepWords.length;
+        $('cliSlots').innerHTML = '<div class="cli-slot-label">✓ <strong>Complete!</strong> You typed the full command.</div>' +
+          cliStepWords.map(function (x) { return '<span class="cli-slot done">' + esc(x) + '</span>'; }).join('');
+        cliShowAnswer(c);
+        $('cliInput').disabled = true;
+        $('cliFeedback').textContent = '✓ Full command correct!';
+        $('cliFeedback').className = 'cli-feedback cli-correct';
+        addXp(2);
+        return;
+      }
+      cliStepPos = nxt;
+      applyCliMode();
+      $('cliInput').focus();
+    } else {
+      $('cliFeedback').textContent = '✗ Not quite. Word ' + (pos + 1) + ' starts with \u201c' + w.charAt(0).toUpperCase() + '\u201d (' + w.length + ' letters).';
+      $('cliFeedback').className = 'cli-feedback cli-wrong';
+      $('cliInput').select();
+    }
+  }
+  $('cliInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && cliStepMode && !this.disabled) {
+      e.preventDefault();
+      cliStepCheck();
+    }
+  });
   $('cliHelpBtn').addEventListener('click', function () {
     var h = $('cliHelp'); if (!h) return;
     h.style.display = h.style.display === 'none' ? 'block' : 'none';
   });
+  $('cliHintBtn').addEventListener('click', function () {
+    var c = cliCards[cliIdx]; if (!c) return;
+    var input = $('cliInput');
+    var cmd = cliRenderCmd(c, false);
+    var parts = cmd.replace(/^\S+\s*[#>]\s*/, '').split(/\s+/).filter(Boolean);
+    var hint;
+    if (parts.length > 1) hint = 'First word: ' + parts[0] + ' · ' + parts.length + ' part' + (parts.length === 1 ? '' : 's') + ' total';
+    else hint = 'Type the command: ' + parts[0];
+    $('cliFeedback').textContent = '💡 ' + hint;
+    $('cliFeedback').className = 'cli-feedback cli-hint';
+    if (input && !input.disabled) input.focus();
+  });
+
+  function cliRenderSuggest() {
+    var box = $('cliSuggest');
+    if (!box || $('cliInput').disabled || cliStepMode) { if (box) box.style.display = 'none'; return; }
+    var v = $('cliInput').value.trim().toLowerCase();
+    if (!v) { box.style.display = 'none'; return; }
+    var cur = cliCards[cliIdx];
+    var curCmd = cur ? cliRenderCmd(cur, false).toLowerCase() : '';
+    var hits = [];
+    for (var i = 0; i < cliCards.length && hits.length < 6; i++) {
+      var c2 = cliClean(cliCards[i]);
+      var lc = c2.toLowerCase();
+      var isCur = cur && curCmd && lc === curCmd;
+      var tokenHits = lc.split(/\s+/).filter(function (t) { return t.startsWith(v); }).length;
+      if (tokenHits > 0 && !isCur) hits.push({ cmd: c2, rank: tokenHits * 10 - i / 100 });
+      else if (lc.startsWith(v) && !isCur) hits.push({ cmd: c2, rank: 1 - i / 1000 });
+    }
+    hits.sort(function (a, b) { return b.rank - a.rank; });
+    if (!hits.length) { box.style.display = 'none'; return; }
+    box.innerHTML = hits.map(function (h) {
+      return '<button class="cli-suggest-item" type="button" data-cmd="' + esc(h.cmd) + '">' + esc(h.cmd) + '</button>';
+    }).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('.cli-suggest-item').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $('cliInput').value = b.dataset.cmd;
+        $('cliSuggest').style.display = 'none';
+        $('cliInput').focus();
+      });
+    });
+  }
+  $('cliInput').addEventListener('input', cliRenderSuggest);
 
   function renderCliList() {
     var q = ($('cliListSearch').value || '').toLowerCase().trim();
@@ -812,14 +1010,18 @@
   });
 
   $('cliInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && cliStepMode) return; // handled by step-mode listener
     if (e.key === 'Enter') {
       e.preventDefault();
+      var s = $('cliSuggest'); if (s) s.style.display = 'none';
       var c = cliCards[cliIdx]; if (!c) return;
       var input = this.value.trim().toLowerCase();
       var cleaned = cliRenderCmd(c, false).toLowerCase();
       var tokens = getClozeAnswer(c).map(function (t) { return t.toLowerCase(); });
       var tokenMatch = tokens.some(function (t) { return t && input === t; });
-      if (input === cleaned.trim() || tokenMatch || (cleaned.includes(input) && input.length > 5)) {
+      var prefixOk = input.length >= 3 && cleaned.indexOf(input) === 0;
+      var tokenPrefixOk = tokens.some(function (t) { return t && t.length >= 3 && t.indexOf(input) === 0; });
+      if (input === cleaned.trim() || tokenMatch || (cleaned.includes(input) && input.length > 5) || prefixOk || tokenPrefixOk) {
         $('cliFeedback').textContent = '✓ Correct!'; $('cliFeedback').className = 'cli-feedback cli-correct';
         $('cliAnswer').textContent = cliRenderCmd(c, false); $('cliAnswer').style.display = 'block'; this.disabled = true;
         if (getExplain(c)) { $('cliExplanation').textContent = getExplain(c); $('cliExplanation').style.display = 'block'; }
@@ -971,6 +1173,7 @@
 
   // ===== DIAGNOSIS TABLES =====
   var diagCache = null;
+  var diagCopyN = 0;
   function buildDiag() {
     var rows = [];
     allCards.forEach(function (c) {
@@ -989,13 +1192,49 @@
     }
     return '';
   }
+  function diagCopyBtn(cmdText) {
+    var id = 'cp_' + (diagCopyN++);
+    return '<span class="diag-cmd-cell"><code class="diag-code">' + esc(cmdText) + '</code>' +
+      '<button class="diag-copy-btn" id="' + id + '" type="button" data-cmd="' + esc(cmdText) + '" aria-label="Copy command">⧉</button></span>';
+  }
+  function wireDiagCopy() {
+    var btns = document.querySelectorAll('.diag-copy-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () {
+        var text = this.dataset.cmd;
+        if (!text) return;
+        flashDiagCopy(this);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function () {});
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      });
+    }
+  }
+  function flashDiagCopy(btn) {
+    var orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(function () { btn.textContent = orig; btn.classList.remove('copied'); }, 1200);
+  }
   function renderDiag() {
     if (!ready) { if ($('diagLoading')) $('diagLoading').style.display = 'block'; return; }
     if ($('diagLoading')) $('diagLoading').style.display = 'none';
     if (!diagCache) diagCache = buildDiag();
+    var topicSel = $('diagTopic');
+    if (topicSel && !topicSel.options.length) {
+      var doms = uniq(diagCache.map(function (r) { return r.domain; }).filter(Boolean)).sort();
+      topicSel.innerHTML = '<option value="all">All topics</option>' + doms.map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('');
+    }
     var q = ($('diagSearch').value || '').toLowerCase().trim();
     var hideCmd = $('diagModeBtn').classList.contains('active');
+    var topic = topicSel ? topicSel.value : 'all';
     var rows = diagCache.filter(function (r) {
+      if (topic !== 'all' && (r.domain || '') !== topic) return false;
       if (!q) return true;
       var hay = (r.problem || '') + ' ' + (r.fix || '') + ' ' + (r.command || '') + ' ' + (r.desc || '') + ' ' + (r.topic || '');
       return hay.toLowerCase().indexOf(q) >= 0;
@@ -1012,25 +1251,76 @@
           '<th>Problem</th>' + (hideCmd ? '' : '<th>Show / Command</th>') + '<th>Fix</th></tr></thead><tbody>';
         ts.forEach(function (r) {
           var cmd = diagCmdFromSteps(r.steps);
-          html += '<tr><td>' + esc(r.problem) + '</td>' + (hideCmd ? '' : '<td><code class="diag-code">' + (cmd ? esc(cmd) : '—') + '</code></td>') + '<td>' + esc(r.fix) + '</td></tr>';
+          html += '<tr><td>' + esc(r.problem) + '</td>' + (hideCmd ? '' : '<td>' + (cmd ? diagCopyBtn(cmd) : '<span class="diag-cmd-cell"><code class="diag-code">—</code></span>') + '</td>') + '<td>' + esc(r.fix) + '</td></tr>';
         });
         html += '</tbody></table></div>';
       }
       if (cli.length) {
         html += '<h3 class="diag-domain">' + esc(dom) + ' — Commands</h3><div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody>';
         cli.forEach(function (r) {
-          html += '<tr><td><code class="diag-code">' + esc(r.command) + '</code></td><td>' + esc(r.desc) + '</td></tr>';
+          html += '<tr><td>' + diagCopyBtn(r.command) + '</td><td>' + esc(r.desc) + cliHelpHtml(r.command) + '</td></tr>';
         });
         html += '</tbody></table></div>';
       }
     });
     $('diagContent').innerHTML = html || '<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-text">No matches</div><div class="empty-sub">Try a broader search term</div></div>';
+    wireDiagCopy();
   }
   $('diagSearch').addEventListener('input', renderDiag);
+  $('diagTopic').addEventListener('change', renderDiag);
   $('diagModeBtn').addEventListener('click', function () {
     this.classList.toggle('active');
     this.textContent = this.classList.contains('active') ? 'Show Commands' : 'Hide Commands';
     renderDiag();
+  });
+
+  // ===== DIAGNOSIS PRACTICE MODE =====
+  var dpQueue = [], dpIdx = 0, dpRevealed = false;
+  function diagPracticeRows() {
+    var topicSel = $('diagTopic');
+    var topic = topicSel ? topicSel.value : 'all';
+    var rows = diagCache.filter(function (r) { return topic === 'all' || (r.domain || '') === topic; });
+    return rows;
+  }
+  function dpShowCard() {
+    if (dpIdx >= dpQueue.length) { dpIdx = 0; dpShowCard(); return; }
+    var r = dpQueue[dpIdx];
+    $('dpIdx').textContent = dpIdx + 1; $('dpTotal').textContent = dpQueue.length;
+    $('dpBar').style.width = ((dpIdx) / dpQueue.length * 100) + '%';
+    dpRevealed = false;
+    var html = '<div class="ssn-type-badge">' + (r.kind === 'ts' ? 'Troubleshooting' : 'Command') + '</div>';
+    if (r.kind === 'ts') {
+      html += '<div class="dp-problem"><div class="dp-label">Problem</div>' + esc(r.problem) + '</div>';
+      if (r.command) html += '<div class="dp-answer" style="display:none"><div class="dp-label">Show / Command</div><code class="diag-code">' + esc(r.command) + '</code></div>';
+      if (r.fix) html += '<div class="dp-answer" style="display:none"><div class="dp-label">Fix</div>' + esc(r.fix) + '</div>';
+    } else {
+      html += '<div class="dp-problem"><div class="dp-label">What does this command do?</div><code class="diag-code">' + esc(r.command) + '</code></div>' +
+        '<div class="dp-answer" style="display:none"><div class="dp-label">Explanation</div>' + esc(r.desc) + cliHelpHtml(r.command) + '</div>';
+    }
+    $('dpCard').innerHTML = html;
+    $('dpRevealBtn').style.display = 'inline-block';
+    $('dpPrevBtn').disabled = dpIdx === 0;
+  }
+  $('diagPracticeBtn').addEventListener('click', function () {
+    if (!diagCache) diagCache = buildDiag();
+    dpQueue = diagPracticeRows().slice();
+    if (!dpQueue.length) { alert('No diagnosis rows for this topic.'); return; }
+    dpIdx = 0;
+    $('diagContent').style.display = 'none';
+    $('diagPractice').style.display = 'block';
+    dpShowCard();
+  });
+  $('dpRevealBtn').addEventListener('click', function () {
+    var r = dpQueue[dpIdx]; if (!r) return;
+    $('dpCard').querySelectorAll('.dp-answer').forEach(function (el) { el.style.display = 'block'; });
+    this.style.display = 'none';
+    addXp(1);
+  });
+  $('dpNextBtn').addEventListener('click', function () { dpIdx++; dpShowCard(); });
+  $('dpPrevBtn').addEventListener('click', function () { if (dpIdx > 0) { dpIdx--; dpShowCard(); } });
+  $('dpExitBtn').addEventListener('click', function () {
+    $('diagPractice').style.display = 'none';
+    $('diagContent').style.display = 'block';
   });
 
   // ===== SM-2 DASHBOARD (merged into root Dashboard tab) =====
@@ -1050,6 +1340,32 @@
   }
   function invalidateSm2Stats() { sm2StatsCache = null; }
 
+  var sm2ShowAllFlag = false;
+  var sm2MasteryHidden = false;
+  var SM2_DOMAIN_GROUPS = [
+    [/BGP|EGP/, 'BGP'],
+    [/OSPF/, 'OSPF'],
+    [/EIGRP/, 'EIGRP'],
+    [/STP|Spanning|Switching|VLAN|EtherChannel|MST|MSTP/, 'Switching & STP'],
+    [/Multicast/i, 'Multicast'],
+    [/Routing|WAN|Packet Forwarding|SD-WAN|Router/, 'Routing & WAN'],
+    [/^IPv4$/, 'IPv4'],
+    [/IPv6|IPv4\/IPv6/, 'IPv6'],
+    [/Wireless|WLAN/, 'Wireless'],
+    [/IoT|Smart |Privacy|Sensor|Vehicular|Location|Green /i, 'IoT & Privacy'],
+    [/Automation|Programm|Ansible|Python|Paramiko|Pexpect|NETCONF|RESTCONF|API|YAML|Jinja|Git|CI\/CD|TDD|Templates|Linux|Continuous|Data Formats|Developer|Source Control|Go$/, 'Automation & Programmability'],
+    [/Cloud|Virtual|AWS|Overlay/, 'Cloud & Virtualization'],
+    [/IP Services|NAT|QoS|Assurance|Monitoring|Services/, 'IP Services & QoS'],
+    [/Security|Crypt|Crypto|Firewall|Intrusion|Malicious|Authentication|Transport|Incident|Threats|PKI|Public-Key|Symmetric|Access Control|VPN|Attacks/, 'Security & Crypto'],
+    [/Architecture|Design|Fabric|SD-Access|Fundamentals|TCP\/IP|Networking|Troubleshooting|Industry Trends/, 'Architecture & Design'],
+    [/Arista|Juniper|General|Cisco|Vendors/, 'Vendors & General']
+  ];
+  function sm2DomainGroup(domain) {
+    for (var i = 0; i < SM2_DOMAIN_GROUPS.length; i++) {
+      if (SM2_DOMAIN_GROUPS[i][0].test(domain)) return SM2_DOMAIN_GROUPS[i][1];
+    }
+    return 'Other';
+  }
   function renderSm2Dashboard() {
     if (!ready) return;
     var total = allCards.length;
@@ -1058,25 +1374,50 @@
     var streak = streakDays();
     var mastered = allCards.filter(function (c) { var s = getSm2(c); return s.rep >= 3 && s.ef >= 2.0; }).length;
     if ($('sm2Hero')) $('sm2Hero').innerHTML = '';
-    var doms = uniq(allCards.map(function (c) { return c.domain; }).filter(Boolean)).sort();
-    $('sm2Mastery').innerHTML = '<h3>SM-2 Mastery by Domain</h3>' + doms.map(function (d) {
-      var cards = allCards.filter(function (c) { return c.domain === d; });
-      var masteredCount = cards.filter(function (c) { var s = getSm2(c); return s.rep >= 3 && s.ef >= 2.0; }).length;
-      var pct = Math.round(masteredCount / cards.length * 100);
-      return '<div class="dash-bar-row"><span class="dash-bar-label">' + esc(d) + '</span>' +
-        '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:' + pct + '%"></div></div>' +
-        '<span class="dash-bar-pct">' + pct + '%</span></div>';
-    }).join('');
+    var domGroups = {};
+    allCards.forEach(function (c) {
+      if (!c.domain) return;
+      var g = sm2DomainGroup(c.domain);
+      domGroups[g] = domGroups[g] || { cards: [], count: 0, mastered: 0 };
+      domGroups[g].cards.push(c);
+    });
+    var domRows = Object.keys(domGroups).map(function (g) {
+      var group = domGroups[g];
+      var masteredCount = group.cards.filter(function (c) { var s = getSm2(c); return s.rep >= 3 && s.ef >= 2.0; }).length;
+      return { d: g, pct: Math.round(masteredCount / group.cards.length * 100) };
+    }).sort(function (a, b) { return b.pct - a.pct; });
+    var showAll = sm2ShowAllFlag;
+    var visible = showAll ? domRows : domRows.slice(0, 10);
+    var hidden = domRows.length - visible.length;
+    $('sm2Mastery').innerHTML = '<div class="dash-sec-head"><h3 class="dash-sec-title">SM-2 Mastery by Domain <span class="dash-sec-count">' + domRows.length + '</span></h3>' +
+      '<button class="trans-btn dash-more-btn" id="sm2CollapseBtn" type="button">' + (sm2MasteryHidden ? 'Show' : 'Hide') + '</button></div>' +
+      (sm2MasteryHidden ? '' :
+      '<div class="dash-bar-rows" id="sm2BarRows">' + visible.map(function (r) {
+        return '<div class="dash-bar-row"><span class="dash-bar-label">' + esc(r.d) + '</span>' +
+          '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:' + r.pct + '%"></div></div>' +
+          '<span class="dash-bar-pct">' + r.pct + '%</span></div>';
+      }).join('') + '</div>' +
+      (hidden > 0 ? '<button class="trans-btn dash-more-btn" id="sm2MoreBtn" type="button">' + (showAll ? 'Show less' : 'Show all ' + hidden + ' more') + '</button>' : ''));
+    var collapseBtn = $('sm2CollapseBtn');
+    if (collapseBtn) collapseBtn.addEventListener('click', function () {
+      sm2MasteryHidden = !sm2MasteryHidden;
+      renderSm2Dashboard();
+    });
+    var moreBtn = $('sm2MoreBtn');
+    if (moreBtn) moreBtn.addEventListener('click', function () {
+      sm2ShowAllFlag = !sm2ShowAllFlag;
+      renderSm2Dashboard();
+    });
     var weak = allCards.filter(function (c) { var s = getSm2(c); return s.rep > 0 && s.ef < 1.5; })
       .sort(function (a, b) { return (getSm2(a).ef || 2.5) - (getSm2(b).ef || 2.5); }).slice(0, 5);
-    $('sm2Weak').innerHTML = weak.length ? '<h3>Weakest Topics</h3>' + weak.map(function (c) {
+    $('sm2Weak').innerHTML = weak.length ? '<h3 class="dash-sec-title">Weakest Topics</h3>' + weak.map(function (c) {
       return '<div class="dash-weak-item">' + esc(getQ(c)) + ' <span class="dash-weak-ef">EF ' + (getSm2(c).ef || 2.5).toFixed(2) + '</span></div>';
     }).join('') : '';
     var types = {};
     allCards.forEach(function (c) { var t = c.asset_type; types[t] = (types[t] || 0) + 1; });
-    $('sm2Types').innerHTML = '<h3>Asset Type Breakdown</h3>' + Object.keys(types).map(function (t) {
-      return '<div class="dash-type-item"><span>' + (TYPE_LABELS[t] || t) + '</span><span>' + types[t] + '</span></div>';
-    }).join('');
+    $('sm2Types').innerHTML = '<h3 class="dash-sec-title">Asset Types</h3><div class="dash-type-chips">' + Object.keys(types).map(function (t) {
+      return '<span class="dash-type-chip">' + (TYPE_LABELS[t] || t) + ' <b>' + types[t] + '</b></span>';
+    }).join('') + '</div>';
   }
 
   // ===== EXPORT / IMPORT / RESET =====
@@ -1180,6 +1521,7 @@
   // ===== INIT =====
   (async function init() {
     await window.studyApp.whenReady();
+    populateWeakSetup();
     var active = document.querySelector('.tab.active');
     if (active) window.studyApp.onTab(active.dataset.tab);
 })();
