@@ -376,6 +376,19 @@ function initFilterRow(){
 
 document.getElementById('searchBox').addEventListener('input',renderBrowse);
 
+window.appNav = {
+  goBrowseCategory: function(name){
+    const cats = getActiveCats();
+    const cat = cats.find(c=>c.name===name);
+    const row = document.getElementById('filterRow');
+    row.querySelectorAll('.filter-btn').forEach(b=>{
+      b.classList.toggle('active', cat ? b.dataset.filter===cat.id : b.dataset.filter==='all');
+    });
+    const browseTab = document.querySelector('.tab[data-tab="browse"]');
+    if(browseTab) browseTab.click();
+  }
+};
+
 // Flashcards
 function updateFlashCategorySel(){
   const cats = getActiveCats();
@@ -644,7 +657,7 @@ function renderQuiz(){
       if(quizAnswered) return;
       quizAnswered = true;
       document.querySelectorAll('.quiz-opt').forEach(b=>b.disabled=true);
-      if(btn.dataset.val===correctVal){btn.classList.add('correct');quizScore++;const r=btn.getBoundingClientRect();burstConfetti(r.left+r.width/2,r.top+r.height/2);}
+      if(btn.dataset.val===correctVal){btn.classList.add('correct');quizScore++;const r=btn.getBoundingClientRect();burstConfetti(r.left+r.width/2,r.top+r.height/2);if(window.studyApp&&window.studyApp.addXp)window.studyApp.addXp(2);}
       else{btn.classList.add('wrong');quizMistakes.push({phrase:item.phrase,meaning:item.meaning,translation:item.translation,translationSv:item.translationSv});document.querySelectorAll('.quiz-opt').forEach(b=>{if(b.dataset.val===correctVal)b.classList.add('reveal');});}
       document.getElementById('quizNext').disabled = false;
     });
@@ -769,6 +782,7 @@ function renderMatch(){
       s.match.rounds++;
       saveStats(courseId,s);
     }
+    if(window.studyApp&&window.studyApp.addXp)window.studyApp.addXp(5);
     return;
   }
 
@@ -891,6 +905,13 @@ document.getElementById('examNext').addEventListener('click',()=>{
   else submitGlossaryExam();
 });
 document.getElementById('examStartBtn').addEventListener('click',startGlossaryExam);
+document.getElementById('examCheckAll').addEventListener('click',()=>{
+  const rv = document.getElementById('examReview');
+  const btn = document.getElementById('examCheckAll');
+  const show = rv.style.display==='none';
+  rv.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? 'Hide Answers' : 'Check All Answers';
+});
 document.getElementById('examReverse').addEventListener('click',function(){ this.classList.toggle('active'); });
 document.getElementById('examRestart').addEventListener('click',()=>{
   if(examTimer){ clearInterval(examTimer); examTimer = null; }
@@ -910,7 +931,7 @@ function submitGlossaryExam(){
     const q = examQueue[i];
     const ans = examAnswers[i];
     const ok = ans!==null && q.options[ans] && q.options[ans].correct;
-    if(ok) score++;
+    if(ok){ score++; if(window.studyApp&&window.studyApp.addXp)window.studyApp.addXp(3); }
     reviewItems.push({q, ans, ok});
   }
   const total = examQueue.length;
@@ -924,13 +945,16 @@ function submitGlossaryExam(){
   document.getElementById('examReview').innerHTML = reviewItems.map((r,i)=>{
     const q = r.q;
     const correctText = q.options.find(o=>o.correct);
+    const chosenText = r.ans!==null ? q.options[r.ans] : null;
     return '<div class="review-card'+(r.ok?'':' review-wrong')+'">'+
       '<div class="r-phrase">'+(i+1)+'. '+escapeHtml(q.question)+'</div>'+
-      '<div class="r-meaning">'+(r.ok?'✓ Your answer: ':'✗ Your answer: ')+(r.ans!==null?escapeHtml(q.options[r.ans].text):'<em>not answered</em>')+'</div>'+
+      '<div class="r-meaning">'+(r.ok?'✓ Your answer: ':'✗ Your answer: ')+(chosenText?escapeHtml(chosenText.text):'<em>not answered</em>')+'</div>'+
       (r.ok?'':'<div class="r-translation">Correct: <strong>'+escapeHtml(correctText?correctText.text:'')+'</strong></div>')+
       '<div class="r-translation">'+escapeHtml(q.translation||'')+'</div>'+
     '</div>';
   }).join('');
+  document.getElementById('examReview').style.display = 'none';
+  document.getElementById('examCheckAll').textContent = 'Check All Answers';
   if(currentCourse>=0){
     const courseId = courses[currentCourse].id;
     const s = loadStats(courseId);

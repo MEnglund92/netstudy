@@ -55,6 +55,16 @@
       '<div class="rb-bar-wrap"><div class="rb-bar-fill" style="width:' + pct + '%"></div></div></div>';
   }
 
+  function renderGame() {
+    if (!window.studyApp || !window.studyApp.getGame) return;
+    var g = window.studyApp.getGame();
+    var lv = $('gameLevel'), xp = $('gameXp'), st = $('gameStreak'), bar = $('gameBar');
+    if (lv) lv.textContent = g.level;
+    if (xp) xp.textContent = g.xp + ' XP';
+    if (st) st.textContent = g.streak + ' day' + (g.streak === 1 ? '' : 's');
+    if (bar) bar.style.width = g.pct + '%';
+  }
+
   function render() {
     var cs = courses();
     if (!cs.length) return;
@@ -111,11 +121,22 @@
         cs.forEach(function (c) { courseCats(c).forEach(function (r) { agg[r.name] = (agg[r.name] || 0) + r.count; }); });
         rows = Object.keys(agg).map(function (k) { return { name: k, count: agg[k] }; }).sort(function (a, b) { return b.count - a.count; });
       }
-      var max3 = rows.reduce(function (a, r) { return Math.max(a, r.count); }, 1);
       cats.innerHTML = rows.length
-        ? rows.slice(0, 8).map(function (r) { return libRow(r.name, r.count, max3); }).join('')
+        ? rows.map(function (r) {
+            return '<button class="rb-cat-row" type="button" title="Browse ' + r.name + '">' +
+              '<span class="rb-cat-name">' + r.name + '</span>' +
+              '<span class="rb-cat-count">' + r.count + '</span></button>';
+          }).join('')
         : '<div class="rb-empty">No categories</div>';
+      var catBtns = cats.querySelectorAll('.rb-cat-row');
+      for (var ci = 0; ci < catBtns.length; ci++) {
+        catBtns[ci].addEventListener('click', function () {
+          var name = this.querySelector('.rb-cat-name').textContent;
+          if (window.appNav && window.appNav.goBrowseCategory) window.appNav.goBrowseCategory(name);
+        });
+      }
     }
+    renderGame();
   }
 
   function loadAudio() {
@@ -134,6 +155,7 @@
     var sel = document.getElementById('courseSelect');
     if (sel) sel.addEventListener('change', function () { setTimeout(render, 80); });
     window.addEventListener('focus', function () { setTimeout(render, 120); });
+    window.addEventListener('netstudy-game', function () { render(); });
     setInterval(render, 30000);
     if (window.studyApp && window.studyApp.whenReady) {
       window.studyApp.whenReady().then(function () { render(); });

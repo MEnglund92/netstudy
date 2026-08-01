@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#050508">
-<meta name="description" content="CCNA network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams.">
-<title>Network Technology Study App</title>
+<meta name="description" content="NetStudy — CCNA network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams, XP and streaks.">
+<title>NetStudy</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -19,10 +19,10 @@
 
   <aside class="side-bar" aria-label="Sidebar">
     <div class="side-inner">
-      <div class="avatar" aria-hidden="true">NT</div>
+      <div class="avatar" aria-hidden="true">NS</div>
       <div class="side-nameplate">
-        <span class="side-title">Network Technology</span>
-        <span class="side-sub">Study App</span>
+        <span class="side-title">NetStudy</span>
+        <span class="side-sub">CCNA Study App</span>
       </div>
       <div class="course-select-wrap side-course">
         <label class="side-label" for="courseSelect">Course</label>
@@ -36,12 +36,14 @@
       <button class="tab" data-tab="quiz" role="tab" aria-selected="false" aria-controls="tab-quiz" title="Multiple-choice quiz on the glossary">❓ Quiz</button>
       <button class="tab" data-tab="match" role="tab" aria-selected="false" aria-controls="tab-match" title="Drag terms to their translations against the clock">🎯 Match</button>
       <button class="tab" data-tab="study" role="tab" aria-selected="false" aria-controls="tab-study" title="Spaced-repetition (SM-2) session over all card types">📖 Study</button>
+      <button class="tab" data-tab="weak" role="tab" aria-selected="false" aria-controls="tab-weak" title="Review the cards you keep getting wrong (low ease factor)">🔁 Weak Words</button>
       <button class="tab" data-tab="cli" role="tab" aria-selected="false" aria-controls="tab-cli" title="Practice real CLI commands: fill-in, study mode, command list">💻 CLI Lab</button>
       <button class="tab" data-tab="concepts" role="tab" aria-selected="false" aria-controls="tab-concepts" title="Course concept pages with deep-dives and diagrams">📚 Concepts</button>
       <button class="tab" data-tab="resources" role="tab" aria-selected="false" aria-controls="tab-resources" title="Study materials: open or download PDFs, audio, links">📎 Resources</button>
-      <button class="tab" data-tab="exam" role="tab" aria-selected="false" aria-controls="tab-exam" title="Timed glossary exam per course or mixed (pass ≥ 70%)">📝 Exam</button>
+      <button class="tab" data-tab="exam" role="tab" aria-selected="false" aria-controls="tab-exam" title="Timed glossary exam per course or mixed (pass ≥ 85%)">📝 Exam</button>
       <button class="tab" data-tab="rexam" role="tab" aria-selected="false" aria-controls="tab-rexam" title="Recall exam over all 11,667 active-recall cards">🧠 Recall Exam</button>
       <button class="tab" data-tab="compare" role="tab" aria-selected="false" aria-controls="tab-compare" title="Side-by-side comparisons of protocols and standards">📊 Compare</button>
+      <button class="tab" data-tab="diag" role="tab" aria-selected="false" aria-controls="tab-diag" title="Diagnosis tables: problem, command to run, fix">🔧 Diagnosis</button>
       <button class="tab" data-tab="dashboard" role="tab" aria-selected="false" aria-controls="tab-dashboard" title="Progress overview: SM-2 stats, quizzes, weakest topics">📊 Dashboard</button>
     </nav>
 
@@ -55,7 +57,7 @@
 
   <header>
     <div class="header-glass">
-      <h1><span class="header-name-plate">Network Technology</span><span class="header-subtitle">Study App</span></h1>
+      <h1><span class="header-name-plate">NetStudy</span><span class="header-subtitle">CCNA Study App</span></h1>
       <div class="header-divider"></div>
       <button id="themeToggle" class="theme-btn" type="button" aria-label="Toggle theme">🌙 Dark</button>
     </div>
@@ -242,6 +244,47 @@
       </div>
     </section>
 
+    <!-- WEAK WORDS -->
+    <section class="tab-panel" id="tab-weak" role="tabpanel">
+      <div id="weakLoading" class="data-status" style="display:none">Loading study data…</div>
+      <div id="weakArea">
+        <div class="weak-head">
+          <p class="weak-intro">Cards your SM-2 profile rates as weakest (ease factor &lt; 2.0 or repeatedly missed). Practice them to push the ease factor back up.</p>
+          <div class="flash-controls" role="group" aria-label="Weak words settings">
+            <button id="weakStartBtn" class="action-btn" type="button">▶ Practice Weak Words</button>
+            <button id="weakResetBtn" class="dash-reset-btn" type="button">Reset Weak Words</button>
+          </div>
+        </div>
+        <div class="weak-list" id="weakList"></div>
+        <div id="weakPractice" style="display:none">
+          <div class="flash-progress">
+            <span id="wIdx">0</span>
+            <div class="bar-wrap"><div class="bar-fill" id="wBar" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
+            <span id="wTotal">0</span>
+          </div>
+          <div id="wCard" class="recall-card"></div>
+          <div class="ssn-nav">
+            <div class="sm2-ratings" id="wRatings" style="display:none">
+              <button class="sm2-btn sm2-0" data-grade="0" type="button">0 Blackout</button>
+              <button class="sm2-btn sm2-1" data-grade="1" type="button">1 Hard</button>
+              <button class="sm2-btn sm2-2" data-grade="2" type="button">2 Medium</button>
+              <button class="sm2-btn sm2-3" data-grade="3" type="button">3 Okay</button>
+              <button class="sm2-btn sm2-4" data-grade="4" type="button">4 Good</button>
+              <button class="sm2-btn sm2-5" data-grade="5" type="button">5 Perfect</button>
+            </div>
+            <button id="wPrevBtn" class="action-btn" style="display:none" type="button">◀ Prev</button>
+            <button id="wNextBtn" class="action-btn" style="display:none" type="button">Next</button>
+            <button id="wDoneBtn" class="action-btn" style="display:none" type="button">Finish Session</button>
+          </div>
+          <div id="wResult" style="display:none">
+            <h3>Weak Word Session Complete</h3>
+            <div id="wStats"></div>
+            <button id="wRestart" class="action-btn" type="button">Back to List</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- CLI LAB -->
     <section class="tab-panel" id="tab-cli" role="tabpanel">
       <div id="cliLoading" class="data-status" style="display:none">Loading CLI commands…</div>
@@ -375,7 +418,10 @@
         <div class="score" id="examFinalScore">0/0</div>
         <p id="examFinalPct">0%</p>
         <div class="result-msg" id="examMsg"></div>
-        <div class="quiz-review" id="examReview"></div>
+        <div class="exam-badge-row">
+          <button id="examCheckAll" class="action-btn" type="button">Check All Answers</button>
+        </div>
+        <div class="quiz-review" id="examReview" style="display:none"></div>
         <button id="examRestart" class="action-btn" type="button">Try Again</button>
       </div>
     </section>
@@ -439,6 +485,16 @@
       </div>
     </section>
 
+    <!-- DIAGNOSIS -->
+    <section class="tab-panel" id="tab-diag" role="tabpanel">
+      <div id="diagLoading" class="data-status" style="display:none">Loading diagnosis data…</div>
+      <div class="diag-tools">
+        <input type="search" class="search-box" id="diagSearch" placeholder="Filter symptoms, commands, fixes..." aria-label="Search diagnosis tables">
+        <button class="trans-btn" id="diagModeBtn" type="button" title="Show or hide the show-command column">Hide Commands</button>
+      </div>
+      <div id="diagContent"></div>
+    </section>
+
     <!-- DASHBOARD -->
     <section class="tab-panel" id="tab-dashboard" role="tabpanel">
       <div class="dashboard-grid" id="dashGrid"></div>
@@ -459,6 +515,14 @@
 
   <aside class="right-bar" aria-label="Progress stats">
     <div class="right-inner">
+      <div class="rb-block">
+        <h3 class="rb-title">Gamification</h3>
+        <div class="rb-lib" id="rbGame">
+          <div class="rb-lib-row"><div class="rb-lib-head"><span class="rb-lib-label">Level</span><span class="rb-lib-value" id="gameLevel">1</span></div><div class="rb-bar-wrap"><div class="rb-bar-fill" id="gameBar" style="width:0%"></div></div></div>
+          <div class="rb-lib-row"><div class="rb-lib-head"><span class="rb-lib-label">XP</span><span class="rb-lib-value" id="gameXp">0</span></div></div>
+          <div class="rb-lib-row"><div class="rb-lib-head"><span class="rb-lib-label">🔥 Streak</span><span class="rb-lib-value" id="gameStreak">0</span></div></div>
+        </div>
+      </div>
       <div class="rb-block">
         <h3 class="rb-title">Library</h3>
         <div class="rb-lib" id="rbLibrary"></div>

@@ -517,6 +517,7 @@
     if (ssnIdx < ssnQueue.length && ssnRatedPos !== ssnIdx) {
       ssnRatedPos = ssnIdx;
       updateSm2(ssnQueue[ssnIdx], grade); ssnAnswered++;
+      addXp(2);
       var t = ssnQueue[ssnIdx].asset_type || '?';
       ssnAnsweredByType[t] = (ssnAnsweredByType[t] || 0) + 1;
       $('ssnRatings').style.display = 'none'; $('ssnNextBtn').style.display = 'inline-block';
@@ -545,6 +546,168 @@
   $('ssnStartBtn').addEventListener('click', startStudy);
   $('ssnRestart').addEventListener('click', function () { $('studySetup').style.display = 'block'; $('studyArea').style.display = 'none'; $('ssnResult').style.display = 'none'; });
   $('ssnDoneBtn').addEventListener('click', function () { if (confirm('End session early?')) finishStudy(); });
+
+  // ===== GAMIFICATION (XP / LEVEL / STREAK) =====
+  var GAME_KEY = 'netstudy_gamestate';
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function dayStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function loadGame() {
+    try { var g = JSON.parse(localStorage.getItem(GAME_KEY)); if (g && typeof g.xp === 'number') return g; } catch (e) { }
+    return { xp: 0, streak: 0, lastXpDay: '' };
+  }
+  function saveGame(g) { try { localStorage.setItem(GAME_KEY, JSON.stringify(g)); } catch (e) { } }
+  function emitGame() { window.dispatchEvent(new CustomEvent('netstudy-game')); }
+  function getLevelInfo() {
+    var g = loadGame();
+    var level = Math.floor(g.xp / 100) + 1;
+    var prev = (level - 1) * 100, next = level * 100;
+    var pct = Math.round((g.xp - prev) / (next - prev) * 100);
+    return { level: level, xp: g.xp, streak: g.streak || 0, pct: Math.max(0, Math.min(100, pct)) };
+  }
+  function addXp(n) {
+    var g = loadGame();
+    var today = dayStr(new Date());
+    if (g.lastXpDay !== today) {
+      var y = new Date(Date.now() - 86400000);
+      g.streak = (g.lastXpDay === dayStr(y)) ? (g.streak || 0) + 1 : 1;
+      g.lastXpDay = today;
+    }
+    g.xp += n;
+    saveGame(g);
+    emitGame();
+    return g;
+  }
+
+  // ===== WEAK WORDS =====
+  var wQueue = [], wIdx = 0, wRatedPos = -1, wAnswered = 0, wShowingAnswer = false;
+
+  function weakCards() {
+    return allCards.filter(function (c) {
+      var s = getSm2(c);
+      if (!s.rep || !(s.hist && s.hist.length)) return false;
+      var last = s.hist[s.hist.length - 1].grade;
+      return s.ef < 2.0 || last <= 2;
+    }).sort(function (a, b) { return (getSm2(a).ef || 2.5) - (getSm2(b).ef || 2.5); });
+  }
+  function lastGrade(c) { var s = getSm2(c); return s.hist && s.hist.length ? s.hist[s.hist.length - 1].grade : -1; }
+
+  function renderWeak() {
+    if (!ready) { if ($('weakLoading')) $('weakLoading').style.display = 'block'; return; }
+    if ($('weakLoading')) $('weakLoading').style.display = 'none';
+    var weak = weakCards();
+    var list = $('weakList');
+    $('weakPractice').style.display = 'none';
+    if (!weak.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-text">No weak words!</div><div class="empty-sub">Keep rating cards 3+ in Study sessions and nothing lands here.</div></div>';
+      return;
+    }
+    list.innerHTML = '<div class="review-title">🔁 ' + weak.length + ' weak card' + (weak.length === 1 ? '' : 's') + ' (ease factor &lt; 2.0 or last rating ≤ 2)</div>' +
+      weak.map(function (c, i) {
+        var s = getSm2(c);
+        return '<div class="review-card">' +
+          '<div class="r-phrase">' + (i + 1) + '. ' + esc(getQ(c)) + '</div>' +
+          '<div class="r-meaning">' + esc(getAns(c) || getDiscCorrect(c) || getClozeCmd(c)) + '</div>' +
+          '<div class="r-translation">EF ' + (s.ef || 2.5).toFixed(2) + ' · last rating ' + lastGrade(c) + ' · ' + esc(c.domain || '') + '</div>' +
+        '</div>';
+      }).join('');
+  }
+
+  function startWeakPractice() {
+    wQueue = weakCards();
+    if (!wQueue.length) { renderWeak(); return; }
+    wIdx = 0; wRatedPos = -1; wAnswered = 0;
+    $('weakList').style.display = 'none';
+    $('weakPractice').style.display = 'block';
+    $('wResult').style.display = 'none';
+    $('wDoneBtn').style.display = 'inline-block';
+    showWCard();
+  }
+  function showWCard() {
+    if (wIdx >= wQueue.length) { finishWeak(); return; }
+    var c = wQueue[wIdx];
+    $('wIdx').textContent = wIdx + 1; $('wTotal').textContent = wQueue.length;
+    $('wBar').style.width = ((wIdx) / wQueue.length * 100) + '%';
+    $('wCard').innerHTML = '<div class="ssn-type-badge">' + esc(TYPE_LABELS[c.asset_type] || c.asset_type || 'Card') + '</div>' + renderCard(c);
+    bindSpeakButtons($('wCard'));
+    $('wRatings').style.display = 'none'; $('wNextBtn').style.display = 'none'; $('wDoneBtn').style.display = 'inline-block';
+    $('wPrevBtn').style.display = 'inline-block'; $('wPrevBtn').disabled = wIdx === 0;
+    wShowingAnswer = false;
+    bindCardEvents($('wCard'), c);
+    var t = c.asset_type;
+    if (t === 'FLASHCARD') {
+      var fc = $('wCard').querySelector('.fc-card');
+      if (fc) fc.addEventListener('click', function () {
+        fc.classList.toggle('flipped');
+        if (fc.classList.contains('flipped')) { wShowingAnswer = true; $('wRatings').style.display = 'flex'; }
+      });
+    } else if (t === 'TROUBLESHOOTING') {
+      var rb = $('wCard').querySelector('.ts-reveal-btn');
+      if (rb) rb.addEventListener('click', function () {
+        var a = $('wCard').querySelector('.ts-answer');
+        if (a) a.style.display = 'block';
+        rb.style.display = 'none';
+        wShowingAnswer = true; $('wRatings').style.display = 'flex';
+      });
+    } else if (t === 'ORDERING') {
+      var ob = $('wCard').querySelector('.ord-check-btn');
+      if (ob) ob.addEventListener('click', function () {
+        var list = $('wCard').querySelector('.ord-list');
+        var userOrder = Array.prototype.map.call(list.querySelectorAll('.ord-item'), function (d) { return d.textContent.replace(/^☰ /, ''); });
+        var correct = getOrderSeq(c);
+        var match = userOrder.length === correct.length && userOrder.every(function (v, i) { return v === correct[i]; });
+        list.style.borderColor = match ? 'var(--success)' : 'var(--error)';
+        ob.textContent = match ? '✓ Correct!' : '✗ Incorrect';
+        var ans = $('wCard').querySelector('.ord-answer');
+        if (ans) ans.style.display = 'block';
+        wShowingAnswer = true; $('wRatings').style.display = 'flex'; $('wNextBtn').style.display = 'inline-block';
+      });
+    }
+    if (t === 'CLOZE_SYNTAX') { wShowingAnswer = true; $('wRatings').style.display = 'flex'; }
+    if (t === 'DISCRIMINATION') {
+      var obs = new MutationObserver(function () {
+        var exp = $('wCard').querySelector('.disc-exp');
+        if (exp && exp.style.display === 'block') {
+          wShowingAnswer = true; $('wRatings').style.display = 'flex'; $('wNextBtn').style.display = 'inline-block';
+          obs.disconnect();
+        }
+      });
+      obs.observe($('wCard'), { subtree: true, attributes: true, attributeFilter: ['style'] });
+      setTimeout(function () { obs.disconnect(); }, 10000);
+    }
+    $('wNextBtn').onclick = function () { wIdx++; showWCard(); };
+    $('wPrevBtn').onclick = function () { if (wIdx > 0) { wIdx--; showWCard(); } };
+  }
+  $('wRatings').addEventListener('click', function (e) {
+    var btn = e.target.closest('.sm2-btn');
+    if (!btn) return;
+    var grade = parseInt(btn.dataset.grade);
+    if (wIdx < wQueue.length && wRatedPos !== wIdx) {
+      wRatedPos = wIdx;
+      updateSm2(wQueue[wIdx], grade); wAnswered++;
+      addXp(2);
+      $('wRatings').style.display = 'none'; $('wNextBtn').style.display = 'inline-block';
+    }
+  });
+  function finishWeak() {
+    invalidateSm2Stats();
+    $('wCard').innerHTML = '';
+    $('wRatings').style.display = 'none'; $('wNextBtn').style.display = 'none'; $('wDoneBtn').style.display = 'none'; $('wPrevBtn').style.display = 'none';
+    $('wResult').style.display = 'block';
+    $('wStats').innerHTML = '<div class="ssn-stat">' + wAnswered + ' of ' + wQueue.length + ' weak cards reviewed</div>' +
+      '<div class="ssn-stat">' + (wQueue.length - wAnswered) + ' skipped</div>';
+  }
+  $('weakStartBtn').addEventListener('click', startWeakPractice);
+  $('wDoneBtn').addEventListener('click', function () { if (confirm('End weak session early?')) finishWeak(); });
+  $('wRestart').addEventListener('click', function () { $('weakList').style.display = 'block'; $('weakPractice').style.display = 'none'; renderWeak(); });
+  $('weakResetBtn').addEventListener('click', function () {
+    var weak = weakCards();
+    if (!weak.length) return;
+    if (confirm('Reset SM-2 progress for ' + weak.length + ' weak card(s)? They will be treated as new.')) {
+      for (var i = 0; i < weak.length; i++) localStorage.removeItem(sm2Key(cardId(weak[i])));
+      invalidateSm2Stats();
+      renderWeak();
+    }
+  });
 
   // ===== CLI LAB =====
   var cliCards = [], cliIdx = 0, cliStudyMode = false, cliListShown = 50;
@@ -660,6 +823,7 @@
         $('cliFeedback').textContent = '✓ Correct!'; $('cliFeedback').className = 'cli-feedback cli-correct';
         $('cliAnswer').textContent = cliRenderCmd(c, false); $('cliAnswer').style.display = 'block'; this.disabled = true;
         if (getExplain(c)) { $('cliExplanation').textContent = getExplain(c); $('cliExplanation').style.display = 'block'; }
+        addXp(1);
       } else {
         $('cliFeedback').textContent = '✗ Not quite. Try again or click "Show Answer"'; $('cliFeedback').className = 'cli-feedback cli-wrong';
         this.select();
@@ -708,6 +872,7 @@
       '<button class="action-btn ex-grade-no" type="button">✗ Didn\'t know</button>';
     row.querySelector('.ex-grade-yes').addEventListener('click', function () {
       exCorrect++; exAnswers.push({ c: c, correct: true });
+      addXp(3);
       row.style.display = 'none'; $('exNextBtn').style.display = 'inline-block';
     });
     row.querySelector('.ex-grade-no').addEventListener('click', function () {
@@ -803,6 +968,70 @@
   }
   $('exStartBtn').addEventListener('click', startExam);
   $('exRestart').addEventListener('click', function () { $('exSetup').style.display = 'block'; $('exArea').style.display = 'none'; $('exResult').style.display = 'none'; });
+
+  // ===== DIAGNOSIS TABLES =====
+  var diagCache = null;
+  function buildDiag() {
+    var rows = [];
+    allCards.forEach(function (c) {
+      if (c.asset_type === 'TROUBLESHOOTING') {
+        rows.push({ kind: 'ts', domain: c.domain || 'General', topic: c.topic || '', problem: getTroubSymptom(c) || getQ(c), fix: getTroubRes(c) || getTroubRoot(c) || '', steps: c.troubleshooting_steps || [] });
+      } else if (c.asset_type === 'CLOZE_SYNTAX') {
+        rows.push({ kind: 'cli', domain: c.domain || 'General', topic: c.topic || '', command: cliRenderCmd(c, false), desc: getExplain(c) || getClozePrompt(c) || '' });
+      }
+    });
+    return rows;
+  }
+  function diagCmdFromSteps(steps) {
+    for (var i = 0; i < steps.length; i++) {
+      var m = /(show|debug|ping|traceroute|trace|sh)\s+[\w\-\.\/\*\+\?\s]+/i.exec(steps[i]);
+      if (m) return m[0].trim();
+    }
+    return '';
+  }
+  function renderDiag() {
+    if (!ready) { if ($('diagLoading')) $('diagLoading').style.display = 'block'; return; }
+    if ($('diagLoading')) $('diagLoading').style.display = 'none';
+    if (!diagCache) diagCache = buildDiag();
+    var q = ($('diagSearch').value || '').toLowerCase().trim();
+    var hideCmd = $('diagModeBtn').classList.contains('active');
+    var rows = diagCache.filter(function (r) {
+      if (!q) return true;
+      var hay = (r.problem || '') + ' ' + (r.fix || '') + ' ' + (r.command || '') + ' ' + (r.desc || '') + ' ' + (r.topic || '');
+      return hay.toLowerCase().indexOf(q) >= 0;
+    });
+    var byDom = {};
+    rows.forEach(function (r) { (byDom[r.domain] = byDom[r.domain] || []).push(r); });
+    var doms = Object.keys(byDom).sort();
+    var html = '';
+    doms.forEach(function (dom) {
+      var ts = byDom[dom].filter(function (r) { return r.kind === 'ts'; });
+      var cli = byDom[dom].filter(function (r) { return r.kind === 'cli'; });
+      if (ts.length) {
+        html += '<h3 class="diag-domain">' + esc(dom) + ' — Troubleshooting</h3><div class="diag-table-wrap"><table class="diag-table"><thead><tr>' +
+          '<th>Problem</th>' + (hideCmd ? '' : '<th>Show / Command</th>') + '<th>Fix</th></tr></thead><tbody>';
+        ts.forEach(function (r) {
+          var cmd = diagCmdFromSteps(r.steps);
+          html += '<tr><td>' + esc(r.problem) + '</td>' + (hideCmd ? '' : '<td><code class="diag-code">' + (cmd ? esc(cmd) : '—') + '</code></td>') + '<td>' + esc(r.fix) + '</td></tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+      if (cli.length) {
+        html += '<h3 class="diag-domain">' + esc(dom) + ' — Commands</h3><div class="diag-table-wrap"><table class="diag-table"><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody>';
+        cli.forEach(function (r) {
+          html += '<tr><td><code class="diag-code">' + esc(r.command) + '</code></td><td>' + esc(r.desc) + '</td></tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+    });
+    $('diagContent').innerHTML = html || '<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-text">No matches</div><div class="empty-sub">Try a broader search term</div></div>';
+  }
+  $('diagSearch').addEventListener('input', renderDiag);
+  $('diagModeBtn').addEventListener('click', function () {
+    this.classList.toggle('active');
+    this.textContent = this.classList.contains('active') ? 'Show Commands' : 'Hide Commands';
+    renderDiag();
+  });
 
   // ===== SM-2 DASHBOARD (merged into root Dashboard tab) =====
   var sm2StatsCache = null, sm2StatsCachedAt = 0;
@@ -926,9 +1155,20 @@
       }
       if (tab === 'cli') initCLI();
       if (tab === 'dashboard') renderSm2Dashboard();
+      if (tab === 'weak') {
+        if (loadFailed) { if ($('weakLoading')) $('weakLoading').style.display = 'none'; $('weakList').innerHTML = '<div class="empty-state">Could not load study data. Check that <code>data/ccna_active_recall.json</code> is available.</div>'; }
+        else renderWeak();
+      }
+      if (tab === 'diag') {
+        if (loadFailed) { if ($('diagLoading')) $('diagLoading').style.display = 'none'; $('diagContent').innerHTML = '<div class="empty-state">Could not load study data. Check that <code>data/ccna_active_recall.json</code> is available.</div>'; }
+        else renderDiag();
+      }
     },
     get ready() { return ready; },
-    getSm2Stats: function () { return getSm2StatsCached(); }
+    getSm2Stats: function () { return getSm2StatsCached(); },
+    getGame: getLevelInfo,
+    addXp: addXp,
+    getWeakCards: function () { return weakCards(); }
   };
   window.studyApp.whenReady = function () {
     if (!whenReadyPromise) {

@@ -1,7 +1,7 @@
 {
-  "name": "Network Technology Study App",
+  "name": "NetStudy — CCNA Study App",
   "short_name": "NetStudy",
-  "description": "CCNA network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams.",
+  "description": "CCNA network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams, XP and streaks.",
   "start_url": "index.html",
   "scope": ".",
   "display": "standalone",
