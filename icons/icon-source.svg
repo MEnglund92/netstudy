@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#050508"/>
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#60a5fa" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <g filter="url(#glow)" transform="translate(64 64) scale(4.0851) translate(-73 -38)">
+    <path d="M120 43 L156.4 64 L156.4 106 L120 127 L83.6 106 L83.6 64 Z"
+      fill="rgba(96,165,250,0.45)" stroke="#60a5fa" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M96 70 L122 70 L96 100 L122 100 M124 70 L144 70 M132 70 L132 100"
+      fill="none" stroke="#60a5fa" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"
+      transform="translate(2.5 2.5)"/>
+    <path d="M96 70 L122 70 L96 100 L122 100"
+      fill="none" stroke="#60a5fa" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M124 70 L144 70"
+      fill="none" stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>
+    <path d="M132 70 L132 100"
+      fill="none" stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="96" cy="70" r="3" fill="#60a5fa"/>
+    <circle cx="122" cy="70" r="3" fill="#60a5fa"/>
+    <circle cx="96" cy="100" r="3" fill="#60a5fa"/>
+    <circle cx="122" cy="100" r="3" fill="#60a5fa"/>
+    <circle cx="124" cy="70" r="3" fill="#60a5fa"/>
+    <circle cx="144" cy="70" r="3" fill="#60a5fa"/>
+    <circle cx="132" cy="100" r="3" fill="#60a5fa"/>
+    <circle cx="120" cy="43" r="4" fill="#60a5fa"/>
+    <circle cx="156.4" cy="106" r="4" fill="#60a5fa"/>
+    <circle cx="83.6" cy="106" r="4" fill="#60a5fa"/>
+  </g>
+</svg>
