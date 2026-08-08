@@ -204,7 +204,7 @@ function switchCourse(){
     const tabId = active.dataset.tab;
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     document.getElementById('tab-'+tabId).classList.add('active');
-    if(tabId==='browse'){initFilterRow();renderBrowse();}
+    if(tabId==='browse'){browsePage=1;initFilterRow();renderBrowse();}
     if(tabId==='flash') renderFlash();
     if(tabId==='quiz') initQuiz();
     if(tabId==='match') initMatch();
@@ -334,6 +334,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // Browse
+var browsePage = 1, browsePerPage = 50;
 function renderBrowse(){
   const data = getActiveData().filter(isPlayableEntry);
   const q = document.getElementById('searchBox').value.toLowerCase();
@@ -342,12 +343,24 @@ function renderBrowse(){
   let items = data;
   if(cat!=='all') items = items.filter(i=>i.category===cat);
   if(q) items = items.filter(i=>i.phrase.toLowerCase().includes(q)||i.meaning.toLowerCase().includes(q)||i.translation.toLowerCase().includes(q));
+  const totalPages = Math.max(1, Math.ceil(items.length / browsePerPage));
+  if (browsePage > totalPages) browsePage = totalPages;
+  if (browsePage < 1) browsePage = 1;
+  const s0 = (browsePage - 1) * browsePerPage;
+  const pageItems = items.slice(s0, s0 + browsePerPage);
+  const pager = document.getElementById('browsePager');
+  if (pager) {
+    pager.style.display = items.length > browsePerPage ? '' : 'none';
+    document.getElementById('browsePagerInfo').textContent = 'Cards ' + (s0 + 1) + '-' + Math.min(s0 + browsePerPage, items.length) + ' of ' + items.length + ' \u00b7 Page ' + browsePage + '/' + totalPages;
+    document.getElementById('browsePrevBtn').disabled = browsePage <= 1;
+    document.getElementById('browseNextBtn').disabled = browsePage >= totalPages;
+  }
   document.getElementById('countLabel').textContent = 'Showing '+items.length+' items';
   if(!items.length){
     document.getElementById('cardGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No items found</div><div class="empty-sub">Add some data to get started</div></div>';
     return;
   }
-  document.getElementById('cardGrid').innerHTML = items.map(i=>{
+  document.getElementById('cardGrid').innerHTML = pageItems.map(i=>{
     const color = getCatColor(i.category);
     const showInit = 'style="display:none"';
     const svDef = i.translationSv || i.translation;
@@ -377,12 +390,16 @@ function initFilterRow(){
     btn.addEventListener('click',()=>{
       row.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
+      browsePage = 1;
       renderBrowse();
     });
   });
 }
 
-document.getElementById('searchBox').addEventListener('input',renderBrowse);
+document.getElementById('browsePrevBtn').addEventListener('click',()=>{if(browsePage>1){browsePage--;renderBrowse();}});
+document.getElementById('browseNextBtn').addEventListener('click',()=>{browsePage++;renderBrowse();});
+
+document.getElementById('searchBox').addEventListener('input',()=>{browsePage=1;renderBrowse();});
 
 window.appNav = {
   goBrowseCategory: function(name){
