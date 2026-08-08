@@ -799,6 +799,39 @@
   var cliCards = [], cliIdx = 0, cliStudyMode = false, cliStepMode = false, cliListShown = 50;
   var cliStepWords = [], cliStepDone = [], cliStepPos = 0;
   var cliLevel = 'easy';
+  var cliHintLevel = 0;
+  function cliDictLookup(cmd) {
+    var dict = (window.cliCommandHelp && window.cliCommandHelp.length) ? window.cliCommandHelp : null;
+    if (!dict || !cmd) return null;
+    var lc = cmd.toLowerCase().trim();
+    var fw = lc.split(/\s+/)[0];
+    for (var i = 0; i < dict.length; i++) {
+      if (String(dict[i].p).toLowerCase() === lc) return dict[i];
+    }
+    for (var j = 0; j < dict.length; j++) {
+      if (String(dict[j].p).toLowerCase().split(/\s+/)[0] === fw) return dict[j];
+    }
+    return null;
+  }
+  function cliUpdateWhat() {
+    var el = $('cliWhat'); if (!el) return;
+    var c = cliCards[cliIdx];
+    var d = c ? cliDictLookup(cliRenderCmd(c, false)) : null;
+    if (d && d.d) { el.innerHTML = 'What it does: <em>' + d.d + '</em>'; el.style.display = 'block'; }
+    else { el.style.display = 'none'; }
+  }
+  function cliGhostSync() {
+    var g = $('cliGhost'); if (!g) return;
+    var input = $('cliInput');
+    if (!input || input.disabled || cliStepMode || cliStudyMode) { g.textContent = ''; return; }
+    var v = input.value.trim();
+    var cur = cliCards[cliIdx];
+    var ans = cur ? cliClean(cur).trim() : '';
+    if (v.length > 0 && ans.length > 1 && ans.toLowerCase().indexOf(v.toLowerCase()) === 0 && v !== ans) {
+      g.textContent = ans.slice(v.length);
+      g.style.display = 'block';
+    } else { g.textContent = ''; g.style.display = 'none'; }
+  }
   var CLI_EASY = ['ls', 'cd', 'pwd', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv', 'grep', 'man', 'ping', 'ipconfig', 'ifconfig', 'ssh', 'tracert', 'sudo', 'clear', 'whoami', 'history', 'enable', 'configure terminal', 'show version', 'show interfaces', 'show ip interface brief', 'hostname', 'exit'];
   var CLI_MEDIUM = ['systemctl', 'top', 'ps', 'kill', 'tar', 'curl', 'scp', 'route', 'ip', 'ip route add', 'show ip route', 'show ip protocols', 'show cdp neighbors', 'show vlan brief', 'show mac address-table', 'nslookup', 'dig', 'netstat'];
   function cliLevelOf(c) {
@@ -812,7 +845,12 @@
     return 'hard';
   }
   function cliDeck() {
-    return allCards.filter(function (c) { return c.asset_type === 'CLOZE_SYNTAX' && cliLevelOf(c) === cliLevel; });
+    var list = allCards.filter(function (c) { return c.asset_type === 'CLOZE_SYNTAX' && cliLevelOf(c) === cliLevel; });
+    if (cliLevel === 'medium') list = list.filter(function (c) { return cliStepWordsOf(cliRenderCmd(c, false)).length <= 4; });
+    if (cliLevel === 'hard') list = list.slice().sort(function (a, b) {
+      return cliStepWordsOf(cliRenderCmd(a, false)).length - cliStepWordsOf(cliRenderCmd(b, false)).length;
+    });
+    return list;
   }
   function cliLevelLabel() { return cliLevel.charAt(0).toUpperCase() + cliLevel.slice(1); }
   function updateCliTotal() { $('cliTotal').textContent = cliCards.length + ' CLI cards · ' + cliLevelLabel(); }
@@ -876,8 +914,15 @@
 
   function initCLI() {
     if (!ready || loadFailed) return;
+    try {
+      var stored = localStorage.getItem('cli_level');
+      if (stored === 'easy' || stored === 'medium' || stored === 'hard') cliLevel = stored;
+    } catch (e) { }
     cliCards = cliDeck().sort(function () { return Math.random() - 0.5; });
     cliIdx = 0;
+    $('cliLevelEasy').classList.toggle('active', cliLevel === 'easy');
+    $('cliLevelMedium').classList.toggle('active', cliLevel === 'medium');
+    $('cliLevelHard').classList.toggle('active', cliLevel === 'hard');
     updateCliTotal();
     showCliCard();
   }
@@ -885,6 +930,7 @@
 
   function setCliLevel(level) {
     cliLevel = level;
+    try { localStorage.setItem('cli_level', level); } catch (e) { }
     $('cliLevelEasy').classList.toggle('active', level === 'easy');
     $('cliLevelMedium').classList.toggle('active', level === 'medium');
     $('cliLevelHard').classList.toggle('active', level === 'hard');
@@ -911,6 +957,9 @@
     $('cliInput').value = '';
     $('cliFeedback').textContent = ''; $('cliFeedback').className = 'cli-feedback';
     $('cliToggleBtn').textContent = 'Show Answer';
+    cliHintLevel = 0;
+    cliGhostSync();
+    cliUpdateWhat();
     if (cliStepMode) cliStepReset(c);
     applyCliMode();
   }
@@ -976,8 +1025,9 @@
     }
   }
   $('cliInput').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && cliStepMode && !this.disabled) {
+    if (cliStepMode && !this.disabled && (e.key === 'Enter' || e.key === 'Tab')) {
       e.preventDefault();
+      if (e.key === 'Tab') { cliStepReveal(); return; }
       cliStepCheck();
     }
   });
@@ -985,15 +1035,38 @@
     var h = $('cliHelp'); if (!h) return;
     h.style.display = h.style.display === 'none' ? 'block' : 'none';
   });
+function cliStepReveal() {
+    var c = cliCards[cliIdx]; if (!c) return;
+    var pos = cliStepNextUndone();
+    if (pos < 0) { cliStepCheck(); return; }
+    var w = cliStepWords[pos];
+    cliStepDone[pos] = true;
+    $('cliFeedback').textContent = 'Revealed word ' + (pos + 1) + ': "' + w + '" - type the next one (Tab reveals, Enter checks).';
+    $('cliFeedback').className = 'cli-feedback cli-hint';
+    var input = $('cliInput'); input.value = ''; input.focus();
+    var nxt = cliStepNextUndone();
+    if (nxt < 0) {
+      cliStepPos = cliStepWords.length;
+      $('cliSlots').innerHTML = '<div class="cli-slot-label">v <strong>Complete!</strong> All words revealed.</div>' +
+        cliStepWords.map(function (x) { return '<span class="cli-slot done">' + esc(x) + '</span>'; }).join('');
+      cliShowAnswer(c);
+      $('cliInput').disabled = true;
+      return;
+    }
+    cliStepPos = nxt;
+    applyCliMode();
+  }
   $('cliHintBtn').addEventListener('click', function () {
     var c = cliCards[cliIdx]; if (!c) return;
     var input = $('cliInput');
     var cmd = cliRenderCmd(c, false);
     var parts = cmd.replace(/^\S+\s*[#>]\s*/, '').split(/\s+/).filter(Boolean);
+    cliHintLevel = Math.min(cliHintLevel + 1, parts.length);
+    var shown = parts.slice(0, cliHintLevel);
     var hint;
-    if (parts.length > 1) hint = 'First word: ' + parts[0] + ' · ' + parts.length + ' part' + (parts.length === 1 ? '' : 's') + ' total';
-    else hint = 'Type the command: ' + parts[0];
-    $('cliFeedback').textContent = '💡 ' + hint;
+    if (cliHintLevel >= parts.length) hint = 'Full command: ' + parts.join(' ');
+    else hint = shown.join(' ') + ' ... (' + (parts.length - cliHintLevel) + ' more part' + (parts.length - cliHintLevel === 1 ? '' : 's') + ')';
+    $('cliFeedback').textContent = 'Hint ' + cliHintLevel + '/' + parts.length + ': ' + hint;
     $('cliFeedback').className = 'cli-feedback cli-hint';
     if (input && !input.disabled) input.focus();
   });
@@ -1024,11 +1097,12 @@
       b.addEventListener('click', function () {
         $('cliInput').value = b.dataset.cmd;
         $('cliSuggest').style.display = 'none';
+        cliGhostSync();
         $('cliInput').focus();
       });
     });
   }
-  $('cliInput').addEventListener('input', cliRenderSuggest);
+  $('cliInput').addEventListener('input', function () { cliRenderSuggest(); cliGhostSync(); });
 
   function renderCliList() {
     var q = ($('cliListSearch').value || '').toLowerCase().trim();

@@ -64,5 +64,60 @@
     "cue_type": "semantic_leak",
     "clean_version": "Which protocol secures web traffic?",
     "explanation": "Semantic leaks hand over the defining attributes of the answer — port and use case — so the learner only has to match the description. The clean version asks for the same knowledge without pre-answering it."
+  },
+  {
+    "domain": "Prompt Hygiene",
+    "title": "The hint is the answer",
+    "prompt": "Which protocol is used to securely copy files between devices? The answer is SCP, the secure copy protocol.",
+    "leaked_cue": "The answer \"SCP\" is written directly into the prompt.",
+    "cue_type": "embedded_answer",
+    "clean_version": "Which protocol is used to securely copy files between devices?",
+    "explanation": "Wording the answer into the question turns recall into reading. Questions must state the problem without stating the solution.",
+    "asset_type": "CUE_SCRUBBER",
+    "id": "cue-7"
+  },
+  {
+    "domain": "Prompt Hygiene",
+    "title": "Leading with the answer",
+    "prompt": "NAT is a method that translates private addresses. Which method translates private addresses for Internet access? Hint: it begins with N.",
+    "leaked_cue": "The first sentence already declares NAT and a letter hint follows it.",
+    "cue_type": "leading_wording",
+    "clean_version": "Which mechanism translates private addresses for Internet access?",
+    "explanation": "Prefacing the question with the answer - or adding a first-letter hint - removes the retrieval challenge. Keep the prompt clean unless the test is specifically about recognition.",
+    "asset_type": "CUE_SCRUBBER",
+    "id": "cue-8"
+  },
+  {
+    "domain": "Prompt Hygiene",
+    "title": "The option that rhymes",
+    "prompt": "Which command deletes a static route? Answer choice that matches \"ip route delete\".",
+    "leaked_cue": "The phrase \"ip route delete\" is echoed inside the question phrasing.",
+    "cue_type": "pattern_hint",
+    "clean_version": "Which command removes a static route from the routing table?",
+    "explanation": "Pattern hints (\"the answer rhymes with / sounds like\") leak an answer-inside-the-wording. The learner merely matches the echo instead of recalling the command.",
+    "asset_type": "CUE_SCRUBBER",
+    "id": "cue-9"
+  },
+  {
+    "domain": "Prompt Hygiene",
+    "title": "Length gives it away",
+    "prompt": "Select the one correct answer. Option C (shown with an expert citation and the longest text) is: enable secret.",
+    "leaked_cue": "The cue leaks the option index (C) and the reason for choosing it (length/emphasis).",
+    "cue_type": "format_leak",
+    "clean_version": "Which command hashes the admin password for privileged EXEC access?",
+    "explanation": "Format leaks - the unusually long option, the extra citation, or layout emphasis - signal the answer. Stripping emphasis and equalising option format restores a fair question.",
+    "asset_type": "CUE_SCRUBBER",
+    "id": "cue-10"
+  },
+  {
+    "domain": "Prompt Hygiene",
+    "title": "The irrelevant compliment",
+    "prompt": "Great question! The answer to what is a VLAN is virtual LAN. Nice job getting this far!",
+    "leaked_cue": "The sentence states \"the answer ... is virtual LAN\" - embedded answer packaged with praise.",
+    "cue_type": "embedded_answer",
+    "clean_version": "What does VLAN stand for, and what does it logically segment?",
+    "explanation": "Compliments and encouragement belong after grading, never inside the question. Here the defining statement is the answer; the praise only masks the leak.",
+    "asset_type": "CUE_SCRUBBER",
+    "id": "cue-11"
   }
 ]

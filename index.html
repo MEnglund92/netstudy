@@ -411,9 +411,13 @@
         </div>
         <div class="cli-body" id="cliBody">
           <div class="cli-prompt" id="cliPrompt"></div>
+          <div class="cli-what" id="cliWhat" style="display:none"></div>
           <div class="cli-input-line">
             <span class="cli-prefix" id="cliPrefix">R1#</span>
-            <input type="text" id="cliInput" class="cli-input" autocomplete="off" spellcheck="false" placeholder="Type command here...">
+            <div class="cli-input-wrap">
+              <span class="cli-ghost" id="cliGhost"></span>
+              <input type="text" id="cliInput" class="cli-input" autocomplete="off" spellcheck="false" placeholder="Type command here...">
+            </div>
           </div>
           <div class="cli-suggest" id="cliSuggest"></div>
           <div class="cli-slots" id="cliSlots" style="display:none"></div>
