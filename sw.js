@@ -1,4 +1,4 @@
-const CACHE = 'netstudy-v17';
+const CACHE = 'netstudy-v18';
 const DATA_CACHE = 'netstudy-data-v1';
 const FILES = [
   '.',
