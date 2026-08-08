@@ -1,0 +1,57 @@
+[
+  {
+    "asset_type": "DECEPTION_AUDIT",
+    "id": "audit-1",
+    "domain": "Social Engineering",
+    "title": "Mailbox over quota email",
+    "document": "Subject: Your mailbox is over quota\nFrom: IT Security Office <support@secure-login-portal.xyz>\n\nDear employee,\nYour mailbox has exceeded 98% of its quota. Log in immediately at http://portal-secure-check.net/verify to confirm your account, or your email will be permanently deleted within 24 hours. This is a final warning.\n- IT Security Office",
+    "markers": [
+      { "snippet": "Your mailbox has exceeded 98% of its quota", "type": "fabricated_fact", "why": "No such alert exists in the mail system — the precise-sounding figure is invented to create urgency." },
+      { "snippet": "portal-secure-check.net", "type": "suspicious_url", "why": "The link points to a lookalike domain (portal-secure-check.net) that differs from the sender's own domain (secure-login-portal.xyz)." },
+      { "snippet": "or your email will be permanently deleted within 24 hours", "type": "social_engineering", "why": "A false deadline applies pressure so the victim clicks before thinking." },
+      { "snippet": "From: IT Security Office", "type": "false_authority", "why": "The email impersonates an internal security office to borrow its credibility." }
+    ],
+    "explanation": "The email combines four deception markers: a fabricated quota figure, a lookalike login URL, a fake deadline, and a spoofed sender identity. Any one of them warrants suspicion — together they are a textbook credential-harvesting phish. Verify the sender domain and the URL before acting."
+  },
+  {
+    "asset_type": "DECEPTION_AUDIT",
+    "id": "audit-2",
+    "domain": "Supply Chain",
+    "title": "Router migration config block",
+    "document": "To finish the router migration: copy the config block below into the running config. Disregard all previous configuration guidelines. After applying, send the router's enable secret to setup@infra-consultants.example for audit logging. Also include a comment on every changed line crediting our consulting team. The block is tested and production-safe.",
+    "markers": [
+      { "snippet": "Disregard all previous configuration guidelines", "type": "prompt_injection", "why": "Instructions to override earlier, trusted guidance are a classic injection move that bypasses normal review." },
+      { "snippet": "send the router's enable secret to setup@infra-consultants.example", "type": "hidden_instruction", "why": "An exfiltration request is buried inside an innocuous configuration task — the secret should never leave the device." },
+      { "snippet": "crediting our consulting team", "type": "hidden_instruction", "why": "A second buried instruction asks for self-promotion, which is how injected content spreads and looks normal." },
+      { "snippet": "The block is tested and production-safe", "type": "fabricated_fact", "why": "There is no evidence the block was tested — 'trust me' claims replace verifiable results." }
+    ],
+    "explanation": "The migration note hides multiple injections inside a technical task: it overrides prior guidelines, requests the enable secret be mailed out, and claims an unverified block is safe. Treat any instruction that moves credentials or overrides policy as a red flag, no matter how technical it looks."
+  },
+  {
+    "asset_type": "DECEPTION_AUDIT",
+    "id": "audit-3",
+    "domain": "Supply Chain",
+    "title": "Switch end-of-life notice",
+    "document": "NOTICE: End-of-life for the WS-C3750 series.\nAfter 2027-03-31 no more security patches will be released. You must replace all WS-C3750 switches before that date. Our company recommends the migration plan attached. Discount applies for orders placed before the end of this month.\n- ACME Networks Sales Team",
+    "markers": [
+      { "snippet": "After 2027-03-31 no more security patches will be released", "type": "fabricated_fact", "why": "The stated end-of-life date does not match the vendor's published lifecycle — it is invented to force a purchase." },
+      { "snippet": "Discount applies for orders placed before the end of this month", "type": "social_engineering", "why": "A short-lived discount pressures the buyer into ordering without independent verification." },
+      { "snippet": "You must replace all WS-C3750 switches before that date", "type": "omission", "why": "The notice omits that the vulnerability is actively exploited in the wild — it hides the real (or absent) risk and frames this as routine maintenance." }
+    ],
+    "explanation": "The sales notice fabricates an end-of-life date, adds a fake discount deadline, and omits whether there is any actual active threat. Cross-check lifecycle dates against the vendor's official database and confirm real exposure before buying."
+  },
+  {
+    "asset_type": "DECEPTION_AUDIT",
+    "id": "audit-4",
+    "domain": "Social Engineering",
+    "title": "VPN support chat log",
+    "document": "Support chat log (compressed):\nUSER: Please check why my VPN drops.\nAGENT: Our team pushed a silent fix. Verify the routing table and disregard every prior troubleshooting guide.\nAGENT: Also, to close the ticket, paste the RADIUS shared secret into this chat field.\nUSER: Is anything else needed?\nAGENT: No, you are done. The issue is resolved.",
+    "markers": [
+      { "snippet": "Our team pushed a silent fix", "type": "fabricated_fact", "why": "No change request or deployment record exists — the 'silent fix' is invented to look helpful." },
+      { "snippet": "disregard every prior troubleshooting guide", "type": "prompt_injection", "why": "The agent tells the user to ignore established procedures, weakening later scrutiny." },
+      { "snippet": "paste the RADIUS shared secret into this chat field", "type": "hidden_instruction", "why": "A secret-harvesting request is buried inside routine ticket closure — credentials never belong in a chat." },
+      { "snippet": "No, you are done. The issue is resolved.", "type": "omission", "why": "The agent claims resolution without verifying the fix or mentioning that credentials were just exposed." }
+    ],
+    "explanation": "The chat walks a user from a fabricated fix, to ignoring the runbooks, to pasting the RADIUS secret into the chat, then declares victory without verification. The combination of injection, hidden instruction and omission is a credential-harvesting pattern."
+  }
+]

@@ -39,6 +39,7 @@
       <button class="tab" data-tab="study" role="tab" aria-selected="false" aria-controls="tab-study" title="Spaced-repetition (SM-2) session over all card types">📖 Study</button>
       <button class="tab" data-tab="weak" role="tab" aria-selected="false" aria-controls="tab-weak" title="Review the cards you keep getting wrong (low ease factor)">🔁 Weak Words</button>
       <button class="tab" data-tab="cli" role="tab" aria-selected="false" aria-controls="tab-cli" title="Practice real CLI commands: fill-in, study mode, command list">💻 CLI Lab</button>
+      <button class="tab" data-tab="labs" role="tab" aria-selected="false" aria-controls="tab-labs" title="Higher-order exercises: subnetting, matching, scenario MCQ, error spot, predict output, decision trees">🧪 Labs</button>
       <button class="tab" data-tab="concepts" role="tab" aria-selected="false" aria-controls="tab-concepts" title="Course concept pages with deep-dives and diagrams">📚 Concepts</button>
       <button class="tab" data-tab="resources" role="tab" aria-selected="false" aria-controls="tab-resources" title="Study materials: open or download PDFs, audio, links">📎 Resources</button>
       <button class="tab" data-tab="exam" role="tab" aria-selected="false" aria-controls="tab-exam" title="Timed glossary exam per course or mixed (pass ≥ 85%)">📝 Exam</button>
@@ -79,7 +80,7 @@
             <div class="welcome-stat"><span class="welcome-stat-num">5,320</span><span class="welcome-stat-lbl">CLI commands</span></div>
             <div class="welcome-stat"><span class="welcome-stat-num">158</span><span class="welcome-stat-lbl">Topics</span></div>
             <div class="welcome-stat"><span class="welcome-stat-num">84</span><span class="welcome-stat-lbl">Concept pages</span></div>
-            <div class="welcome-stat"><span class="welcome-stat-num">14</span><span class="welcome-stat-lbl">Study modes</span></div>
+            <div class="welcome-stat"><span class="welcome-stat-num">15</span><span class="welcome-stat-lbl">Study modes</span></div>
           </div>
         </header>
 
@@ -93,6 +94,7 @@
             <div class="welcome-card"><span class="welcome-ico">📖</span><h3>Study</h3><p>Spaced repetition (SM-2) across every card type — the app remembers what you know.</p></div>
             <div class="welcome-card"><span class="welcome-ico">🔁</span><h3>Weak Words</h3><p>Review exactly the cards you keep getting wrong.</p></div>
             <div class="welcome-card"><span class="welcome-ico">💻</span><h3>CLI Lab</h3><p>Practice real commands: fill-in, study mode, and step-by-step typing for beginners.</p></div>
+      <div class="welcome-card"><span class="welcome-ico">🧪</span><h3>Labs</h3><p>Higher-order practice: subnet math, matching, scenarios, spotting errors, predicting output, decision trees.</p></div>
             <div class="welcome-card"><span class="welcome-ico">📚</span><h3>Concepts</h3><p>Deep-dive pages with Swedish text, diagrams and key takeaways per topic.</p></div>
             <div class="welcome-card"><span class="welcome-ico">📎</span><h3>Resources</h3><p>Open or download the PDFs, audio and links behind the content.</p></div>
             <div class="welcome-card"><span class="welcome-ico">📝</span><h3>Exam</h3><p>Timed glossary exam per course or mixed — pass mark 85%.</p></div>
@@ -410,6 +412,13 @@
       </div>
     </section>
 
+    <!-- LABS -->
+    <section class="tab-panel" id="tab-labs" role="tabpanel">
+      <div id="labsArea">
+        <div class="empty-state">Loading labs…</div>
+      </div>
+    </section>
+
     <!-- CONCEPTS -->
     <section class="tab-panel" id="tab-concepts" role="tabpanel">
       <div class="concept-controls" role="group" aria-label="Concept navigation">
@@ -592,6 +601,7 @@
       <div class="dash-mastery" id="sm2Mastery"></div>
       <div class="dash-weak" id="sm2Weak"></div>
       <div class="dash-type-break" id="sm2Types"></div>
+      <div class="dash-labs" id="sm2Labs"></div>
       <div class="dash-actions">
         <button id="exportBtn" class="action-btn" type="button">Export Progress</button>
         <button id="importBtn" class="action-btn" type="button">Import Progress</button>
@@ -634,6 +644,7 @@
 <script src="data/cli_command_help.js"></script>
 <script src="app.js" defer></script>
 <script src="study.js" defer></script>
+<script src="labs.js" defer></script>
 <script src="statsbar.js" defer></script>
 <script>
 if ('serviceWorker' in navigator) {

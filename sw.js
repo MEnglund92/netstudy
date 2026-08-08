@@ -1,4 +1,4 @@
-const CACHE = 'netstudy-v10';
+const CACHE = 'netstudy-v12';
 const DATA_CACHE = 'netstudy-data-v1';
 const FILES = [
   '.',
@@ -7,6 +7,7 @@ const FILES = [
   'recall.css',
   'app.js',
   'study.js',
+  'labs.js',
   'statsbar.js',
   'manifest.json',
   'data/ccna_glossary_data.js',
@@ -34,7 +35,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   // Network-first for large study data and audio: fresh when online, cached copy when offline.
-  if (url.pathname.endsWith('/data/ccna_active_recall.json') || url.pathname.includes('/data/audio/')) {
+  if (url.pathname.endsWith('/data/ccna_active_recall.json') || url.pathname.endsWith('/data/ccna_practice_labs.json') || url.pathname.includes('/data/audio/') || url.pathname.includes('/data/behavioral_')) {
     e.respondWith(
       fetch(e.request).then(res => {
         if (res && res.status === 200) {

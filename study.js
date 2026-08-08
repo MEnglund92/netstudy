@@ -137,16 +137,32 @@
     return d || defaultSm2();
   }
 
-  function updateSm2(c, grade) {
+  // Latency-weighted SM-2: response time modulates how much a grade is trusted.
+  // q(t) evolves 1.5 (very fast) -> 0.5 (very slow); the EF delta is scaled by q(t).
+  // Pure deterministic math, no ML: a fast recall is a stronger memory signal,
+  // a slow recall is a weaker one.
+  function latencyTrust(latMs) {
+    if (typeof latMs !== 'number' || !isFinite(latMs) || latMs < 0) return 1;
+    var t = latMs / 1000;
+    if (t <= 5) return 1.5;
+    if (t <= 20) return 1.1;
+    if (t <= 60) return 1.0;
+    if (t <= 120) return 0.7;
+    return 0.5;
+  }
+
+  function updateSm2(c, grade, latMs) {
     var sm = getSm2(c), ef = sm.ef, iv = sm.iv, rep = sm.rep;
     if (grade < 3) { rep = 0; iv = 1; }
     else {
       if (rep === 0) iv = 1; else if (rep === 1) iv = 6; else iv = Math.round(iv * ef);
       rep++;
     }
-    ef = Math.max(1.3, ef + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+    var q = latencyTrust(latMs);
+    var delta = (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+    ef = Math.max(1.3, ef + delta * q);
     var nx = new Date(Date.now() + iv * 86400000);
-    sm.hist.push({ grade: grade, ts: Date.now() });
+    sm.hist.push({ grade: grade, ts: Date.now(), lat: (typeof latMs === 'number' && isFinite(latMs)) ? latMs : null });
     sm.ef = ef; sm.iv = iv; sm.rep = rep; sm.nx = nx.toISOString();
     saveSm2(cardId(c), sm);
   }
@@ -477,7 +493,7 @@
   }
 
   // ===== STUDY SESSION =====
-  var ssnQueue = [], ssnIdx = 0, ssnAnswered = 0, ssnShowingAnswer = false, ssnAnsweredByType = {}, ssnRatedPos = -1;
+  var ssnQueue = [], ssnIdx = 0, ssnAnswered = 0, ssnShowingAnswer = false, ssnAnsweredByType = {}, ssnRatedPos = -1, ssnShownAt = 0;
 
   function startStudy() {
     if (!ready || loadFailed) return;
@@ -505,6 +521,7 @@
 
   function showSsnCard() {
     if (ssnIdx >= ssnQueue.length) { finishStudy(); return; }
+    ssnShownAt = Date.now();
     var c = ssnQueue[ssnIdx];
     $('ssnIdx').textContent = ssnIdx + 1; $('ssnTotal').textContent = ssnQueue.length;
     $('ssnBar').style.width = ((ssnIdx) / ssnQueue.length * 100) + '%';
@@ -567,7 +584,7 @@
     var grade = parseInt(btn.dataset.grade);
     if (ssnIdx < ssnQueue.length && ssnRatedPos !== ssnIdx) {
       ssnRatedPos = ssnIdx;
-      updateSm2(ssnQueue[ssnIdx], grade); ssnAnswered++;
+      updateSm2(ssnQueue[ssnIdx], grade, Date.now() - ssnShownAt); ssnAnswered++;
       addXp(2);
       var t = ssnQueue[ssnIdx].asset_type || '?';
       ssnAnsweredByType[t] = (ssnAnsweredByType[t] || 0) + 1;
@@ -630,7 +647,7 @@
   }
 
   // ===== WEAK WORDS =====
-  var wQueue = [], wIdx = 0, wRatedPos = -1, wAnswered = 0, wShowingAnswer = false;
+  var wQueue = [], wIdx = 0, wRatedPos = -1, wAnswered = 0, wShowingAnswer = false, wShownAt = 0;
 
   function weakCards() {
     return allCards.filter(function (c) {
@@ -692,6 +709,7 @@
   }
   function showWCard() {
     if (wIdx >= wQueue.length) { finishWeak(); return; }
+    wShownAt = Date.now();
     var c = wQueue[wIdx];
     $('wIdx').textContent = wIdx + 1; $('wTotal').textContent = wQueue.length;
     $('wBar').style.width = ((wIdx) / wQueue.length * 100) + '%';
@@ -751,7 +769,7 @@
     var grade = parseInt(btn.dataset.grade);
     if (wIdx < wQueue.length && wRatedPos !== wIdx) {
       wRatedPos = wIdx;
-      updateSm2(wQueue[wIdx], grade); wAnswered++;
+      updateSm2(wQueue[wIdx], grade, Date.now() - wShownAt); wAnswered++;
       addXp(2);
       $('wRatings').style.display = 'none'; $('wNextBtn').style.display = 'inline-block';
     }
@@ -1418,6 +1436,38 @@
     $('sm2Types').innerHTML = '<h3 class="dash-sec-title">Asset Types</h3><div class="dash-type-chips">' + Object.keys(types).map(function (t) {
       return '<span class="dash-type-chip">' + (TYPE_LABELS[t] || t) + ' <b>' + types[t] + '</b></span>';
     }).join('') + '</div>';
+    $('sm2Labs').innerHTML = renderLabsStats(loadLabRatings());
+  }
+
+  var LAB_MODE_LABELS = { subnet: 'Subnet Calc', matching: 'Matching', scenario: 'Scenario MCQ', error: 'Error Spot', predict: 'Predict Output', decision: 'Decision', behavior: 'Behavior' };
+  function loadLabRatings() {
+    try { return JSON.parse(localStorage.getItem('netstudy_lab_ratings')) || []; } catch (e) { return []; }
+  }
+  function renderLabsStats(r) {
+    if (!r || !r.length) return '<h3 class="dash-sec-title">Labs Practice</h3><p class="dash-muted">No lab attempts yet &mdash; head to the Labs tab and run an exercise.</p>';
+    var byMode = {};
+    var tot = { n: 0, ok: 0, latSum: 0, latN: 0 };
+    r.forEach(function (e) {
+      var m = e.mode || '?';
+      var s = byMode[m] || (byMode[m] = { n: 0, ok: 0, latSum: 0, latN: 0 });
+      s.n++; s.ok += e.ok ? 1 : 0;
+      tot.n++; tot.ok += e.ok ? 1 : 0;
+      if (typeof e.lat === 'number') { s.latSum += e.lat; s.latN++; tot.latSum += e.lat; tot.latN++; }
+    });
+    var rows = Object.keys(byMode).sort(function (a, b) { return byMode[b].n - byMode[a].n; });
+    return '<h3 class="dash-sec-title">Labs Practice <span class="dash-sec-count">' + tot.n + '</span></h3>' +
+      '<div class="dash-type-chips">' +
+        '<span class="dash-type-chip">Attempts <b>' + tot.n + '</b></span>' +
+        '<span class="dash-type-chip">Correct <b>' + Math.round(tot.ok / tot.n * 100) + '%</b></span>' +
+        '<span class="dash-type-chip">Avg latency <b>' + (tot.latN ? Math.round(tot.latSum / tot.latN) + ' ms' : '&ndash;') + '</b></span>' +
+      '</div>' +
+      '<div class="dash-labs-table">' + rows.map(function (m) {
+        var s = byMode[m];
+        var pct = Math.round(s.ok / s.n * 100);
+        return '<div class="dash-labs-row"><span class="dash-labs-mode">' + esc(LAB_MODE_LABELS[m] || m) + '</span>' +
+          '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:' + pct + '%"></div></div>' +
+          '<span class="dash-labs-num">' + s.ok + '/' + s.n + ' (' + pct + '%)' + (s.latN ? ' &middot; ' + Math.round(s.latSum / s.latN) + ' ms' : '') + '</span></div>';
+      }).join('') + '</div>';
   }
 
   // ===== EXPORT / IMPORT / RESET =====
@@ -1509,7 +1559,20 @@
     getSm2Stats: function () { return getSm2StatsCached(); },
     getGame: getLevelInfo,
     addXp: addXp,
-    getWeakCards: function () { return weakCards(); }
+    getWeakCards: function () { return weakCards(); },
+    rateLab: function (asset, result) {
+      // Deterministic record of a Labs exercise attempt. Pure localStorage stats,
+      // no ML. Result: {ok:bool, lat:ms, mode:string, id:string}
+      var key = 'netstudy_lab_ratings';
+      var r = [];
+      try { r = JSON.parse(localStorage.getItem(key)) || []; } catch (e) { r = []; }
+      var entry = { ts: Date.now(), mode: result && result.mode, id: result && result.id, ok: !!(result && result.ok), lat: (typeof result === 'object' && result && typeof result.latency === 'number') ? result.latency : null };
+      r.push(entry);
+      if (r.length > 2000) r = r.slice(-2000);
+      try { localStorage.setItem(key, JSON.stringify(r)); } catch (e) { /* quota */ }
+      if (entry.ok) addXp(1);
+      return entry;
+    }
   };
   window.studyApp.whenReady = function () {
     if (!whenReadyPromise) {

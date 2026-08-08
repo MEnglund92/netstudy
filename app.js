@@ -303,6 +303,7 @@ document.querySelectorAll('.tab').forEach(tab=>{
     if(tab.dataset.tab==='compare') renderCompare();
     if(tab.dataset.tab==='dashboard') renderDashboard();
     if(window.studyApp) window.studyApp.onTab(tab.dataset.tab);
+    if(window.labsApp) window.labsApp.onTab(tab.dataset.tab);
 
   });
 });
