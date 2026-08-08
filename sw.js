@@ -1,4 +1,4 @@
-const CACHE = 'netstudy-v12';
+const CACHE = 'netstudy-v14';
 const DATA_CACHE = 'netstudy-data-v1';
 const FILES = [
   '.',
@@ -17,6 +17,7 @@ const FILES = [
   'fonts/inter-700.woff2',
   'fonts/inter-800.woff2',
   'fonts/playfairdisplay-700.woff2',
+  'icons/zokie.svg',
   'icons/icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png'

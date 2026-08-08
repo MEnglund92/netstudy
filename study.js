@@ -798,6 +798,24 @@
   // ===== CLI LAB =====
   var cliCards = [], cliIdx = 0, cliStudyMode = false, cliStepMode = false, cliListShown = 50;
   var cliStepWords = [], cliStepDone = [], cliStepPos = 0;
+  var cliLevel = 'easy';
+  var CLI_EASY = ['ls', 'cd', 'pwd', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv', 'grep', 'man', 'ping', 'ipconfig', 'ifconfig', 'ssh', 'tracert', 'sudo', 'clear', 'whoami', 'history', 'enable', 'configure terminal', 'show version', 'show interfaces', 'show ip interface brief', 'hostname', 'exit'];
+  var CLI_MEDIUM = ['systemctl', 'top', 'ps', 'kill', 'tar', 'curl', 'scp', 'route', 'ip', 'ip route add', 'show ip route', 'show ip protocols', 'show cdp neighbors', 'show vlan brief', 'show mac address-table', 'nslookup', 'dig', 'netstat'];
+  function cliLevelOf(c) {
+    var s = cliClean(c).replace(/^[^\s]+\s*[#>]\s*/, '').toLowerCase().trim();
+    if (!s) return 'hard';
+    if (CLI_EASY.indexOf(s) !== -1) return 'easy';
+    if (CLI_MEDIUM.indexOf(s) !== -1) return 'medium';
+    var fw = s.split(/\s+/)[0];
+    if (CLI_EASY.indexOf(fw) !== -1) return 'easy';
+    if (CLI_MEDIUM.indexOf(fw) !== -1) return 'medium';
+    return 'hard';
+  }
+  function cliDeck() {
+    return allCards.filter(function (c) { return c.asset_type === 'CLOZE_SYNTAX' && cliLevelOf(c) === cliLevel; });
+  }
+  function cliLevelLabel() { return cliLevel.charAt(0).toUpperCase() + cliLevel.slice(1); }
+  function updateCliTotal() { $('cliTotal').textContent = cliCards.length + ' CLI cards · ' + cliLevelLabel(); }
 
   function cliClean(c) { return cliRenderCmd(c, false); }
   function cliShowAnswer(c) {
@@ -858,12 +876,27 @@
 
   function initCLI() {
     if (!ready || loadFailed) return;
-    cliCards = allCards.filter(function (c) { return c.asset_type === 'CLOZE_SYNTAX'; }).sort(function () { return Math.random() - 0.5; });
+    cliCards = cliDeck().sort(function () { return Math.random() - 0.5; });
     cliIdx = 0;
-    $('cliTotal').textContent = cliCards.length + ' CLI cards';
+    updateCliTotal();
     showCliCard();
   }
   $('cliShuffleBtn').addEventListener('click', function () { shuffle(cliCards); cliIdx = 0; showCliCard(); });
+
+  function setCliLevel(level) {
+    cliLevel = level;
+    $('cliLevelEasy').classList.toggle('active', level === 'easy');
+    $('cliLevelMedium').classList.toggle('active', level === 'medium');
+    $('cliLevelHard').classList.toggle('active', level === 'hard');
+    cliCards = cliDeck().sort(function () { return Math.random() - 0.5; });
+    cliIdx = 0; cliListShown = 50;
+    updateCliTotal();
+    showCliCard();
+    if ($('cliListPanel') && $('cliListPanel').style.display !== 'none') renderCliList();
+  }
+  $('cliLevelEasy').addEventListener('click', function () { setCliLevel('easy'); });
+  $('cliLevelMedium').addEventListener('click', function () { setCliLevel('medium'); });
+  $('cliLevelHard').addEventListener('click', function () { setCliLevel('hard'); });
 
   function showCliCard() {
     if (cliCards.length === 0 || cliIdx >= cliCards.length) cliIdx = 0;
@@ -1192,6 +1225,7 @@
   // ===== DIAGNOSIS TABLES =====
   var diagCache = null;
   var diagCopyN = 0;
+  var diagPage = 1, diagPerPage = 100, diagSearchTimer = null;
   function buildDiag() {
     var rows = [];
     allCards.forEach(function (c) {
@@ -1257,6 +1291,23 @@
       var hay = (r.problem || '') + ' ' + (r.fix || '') + ' ' + (r.command || '') + ' ' + (r.desc || '') + ' ' + (r.topic || '');
       return hay.toLowerCase().indexOf(q) >= 0;
     });
+    var totalMatches = rows.length;
+    var totalPages = Math.max(1, Math.ceil(totalMatches / diagPerPage));
+    if (diagPage > totalPages) diagPage = totalPages;
+    if (diagPage < 1) diagPage = 1;
+    var s0 = (diagPage - 1) * diagPerPage;
+    rows = rows.slice(s0, s0 + diagPerPage);
+    var pager = $('diagPager');
+    if (pager) {
+      if (totalMatches > diagPerPage) {
+        pager.style.display = 'flex';
+        $('diagPagerInfo').textContent = 'Rows ' + (s0 + 1) + '–' + Math.min(s0 + diagPerPage, totalMatches) + ' of ' + totalMatches + ' · Page ' + diagPage + '/' + totalPages;
+        $('diagPrevBtn').disabled = diagPage <= 1;
+        $('diagNextBtn').disabled = diagPage >= totalPages;
+      } else {
+        pager.style.display = 'none';
+      }
+    }
     var byDom = {};
     rows.forEach(function (r) { (byDom[r.domain] = byDom[r.domain] || []).push(r); });
     var doms = Object.keys(byDom).sort();
@@ -1284,8 +1335,14 @@
     $('diagContent').innerHTML = html || '<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-text">No matches</div><div class="empty-sub">Try a broader search term</div></div>';
     wireDiagCopy();
   }
-  $('diagSearch').addEventListener('input', renderDiag);
-  $('diagTopic').addEventListener('change', renderDiag);
+  $('diagSearch').addEventListener('input', function () {
+    diagPage = 1;
+    clearTimeout(diagSearchTimer);
+    diagSearchTimer = setTimeout(renderDiag, 250);
+  });
+  $('diagTopic').addEventListener('change', function () { diagPage = 1; renderDiag(); });
+  $('diagPrevBtn').addEventListener('click', function () { if (diagPage > 1) { diagPage--; renderDiag(); } });
+  $('diagNextBtn').addEventListener('click', function () { diagPage++; renderDiag(); });
   $('diagModeBtn').addEventListener('click', function () {
     this.classList.toggle('active');
     this.textContent = this.classList.contains('active') ? 'Show Commands' : 'Hide Commands';

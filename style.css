@@ -1065,7 +1065,7 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
 .resource-card .audio-player audio { width: 100%; height: 36px; border-radius: var(--radius-sm); }
 .res-list {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   align-items: stretch;
 }
@@ -1078,11 +1078,13 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
   border-radius: var(--radius-md);
   background: var(--card-bg);
   transition: border-color .2s;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .audio-row { grid-column: 1 / -1; flex-wrap: wrap; }
 .res-row:hover { border-color: var(--hover-border); }
 .res-ico { font-size: 1.15rem; flex-shrink: 0; }
-.res-meta { flex: 1; min-width: 0; }
+.res-meta { flex: 1; min-width: 0; overflow: hidden; }
 .res-name { font-size: .82rem; font-weight: 600; color: var(--text-white); }
 .res-sub { font-size: .72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .res-badge {
@@ -1224,8 +1226,8 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
 }
 .dash-hero-val { display: block; font-size: 1.5rem; font-weight: 800; color: var(--tag-color); line-height: 1.2; }
 .dash-hero-lbl { display: block; font-size: 0.62rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-.dash-course-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.dash-course-table { background: var(--card-bg); border: 1px solid var(--neon-border); border-radius: var(--radius-lg); overflow: hidden; }
+.dash-course-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.dash-course-table { background: var(--card-bg); border: 1px solid var(--neon-border); border-radius: var(--radius-lg); overflow-x: auto; }
 .dash-course-table table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .dash-course-table th { text-align: left; padding: 8px 12px; background: var(--dash-header); color: var(--text-sub); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.5px; }
 .dash-course-table td { padding: 7px 12px; border-top: 1px solid var(--neon-border); color: var(--text); }
@@ -1360,7 +1362,8 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
 * { scrollbar-width: thin; scrollbar-color: var(--surface-2) transparent; }
 
 @media (max-width: 768px) {
-  .card-grid, .dash-course-grid, .planner-grid, .study-card-grid { grid-template-columns: 1fr; }
+  .card-grid, .dash-course-grid, .planner-grid, .study-card-grid { grid-template-columns: minmax(0, 1fr); }
+  .res-list { grid-template-columns: minmax(0, 1fr); }
   .quiz-options, #examOptions { grid-template-columns: 1fr; }
   .dash-hero-grid { grid-template-columns: repeat(3, 1fr); }
   .tabs { overflow-x: auto; scrollbar-width: none; }
@@ -1468,20 +1471,19 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
   width: 60px;
   height: 60px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--tag-color), #03568a);
-  color: #fff;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.5rem;
+  background: #050508;
+  border: 1px solid var(--neon-border);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 0 3px var(--accent-soft), var(--neon-glow);
   margin-bottom: 12px;
-  border: none;
   cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease;
+  overflow: hidden;
+  padding: 0;
 }
+.avatar-mark { width: 44px; height: 44px; display: block; }
 .avatar:hover { transform: scale(1.05); box-shadow: 0 0 0 3px var(--accent-soft), 0 0 14px var(--tag-color); }
 .avatar:focus-visible { outline: 2px solid var(--tag-color); outline-offset: 2px; }
 .side-title { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--text); display: block; line-height: 1.2; }
@@ -1538,6 +1540,10 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
 .ssn-type-stat span:last-child{font-weight:700}
 
 /* S10 - CLI Lab study/help/list */
+.cli-level-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.cli-level-label{font-size:0.8rem;font-weight:700;color:var(--text-muted,#9ca3af);margin-right:2px}
+.cli-level-btn{padding:6px 14px;font-size:0.78rem}
+.cli-level-btn.active{background:var(--tag-color);border-color:var(--tag-color);color:#fff}
 .cli-help{background:var(--card-bg,rgba(255,255,255,0.04));border:1px solid var(--border-color,rgba(255,255,255,0.1));border-radius:12px;padding:14px 18px;margin-bottom:12px;font-size:0.85rem;line-height:1.6;color:var(--text-muted,#9ca3af)}
 .cli-help ul{margin:8px 0 0;padding-left:18px}
 .cli-help kbd{background:var(--accent-soft);color:var(--tag-color);border-radius:4px;padding:1px 6px;font-size:0.75rem}
@@ -1599,6 +1605,10 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,[t
 
 /* S18 - Diagnosis practice mode */
 .diag-tools .concept-select{flex:0 0 auto;max-width:280px}
+.diag-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0;padding:8px 12px;border:1px solid var(--border-color,rgba(255,255,255,0.1));border-radius:10px;background:var(--card-bg,rgba(255,255,255,0.04))}
+.diag-pager-info{font-size:0.82rem;color:var(--text-muted,#9ca3af)}
+.diag-pager-btns{display:flex;gap:8px}
+.diag-pager-btns .trans-btn[disabled]{opacity:0.4;pointer-events:none}
 #diagPractice .dp-card{max-width:640px;margin:0 auto}
 .dp-card{background:var(--card-bg);border:1px solid var(--neon-border);border-radius:var(--radius-xl);padding:20px}
 .dp-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-sub);margin-bottom:6px}

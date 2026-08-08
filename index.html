@@ -9,8 +9,9 @@
 <meta name="description" content="NetStudy — network technology study app: glossary, flashcards, quiz, match, SM-2 active recall, CLI lab, exams, XP and streaks.">
 <title>NetStudy</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/zokie.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="recall.css">
 </head>
@@ -19,7 +20,7 @@
 
   <aside class="side-bar" aria-label="Sidebar">
     <div class="side-inner">
-      <button class="avatar" id="homeBtn" type="button" title="Go to Browse (front page)" aria-label="Go to Browse (front page)">NS</button>
+      <button class="avatar" id="homeBtn" type="button" title="Go to Browse (front page)" aria-label="Go to Browse (front page)"><img class="avatar-mark" src="icons/zokie.svg" alt="NetStudy" width="44" height="44"></button>
       <div class="side-nameplate">
         <span class="side-title">NetStudy</span>
         <span class="side-sub">Network Study App</span>
@@ -81,6 +82,10 @@
             <div class="welcome-stat"><span class="welcome-stat-num">158</span><span class="welcome-stat-lbl">Topics</span></div>
             <div class="welcome-stat"><span class="welcome-stat-num">84</span><span class="welcome-stat-lbl">Concept pages</span></div>
             <div class="welcome-stat"><span class="welcome-stat-num">15</span><span class="welcome-stat-lbl">Study modes</span></div>
+          </div>
+          <div class="welcome-logo" aria-label="ZokieTech">
+            <img src="icons/zokie.svg" alt="ZokieTech logo" width="64" height="64">
+            <span class="welcome-brand">ZokieTech</span>
           </div>
         </header>
 
@@ -368,6 +373,12 @@
           <button id="cliToggleBtn" class="action-btn" type="button">Show Answer</button>
           <button id="cliHintBtn" class="action-btn" type="button">💡 Hint</button>
         </div>
+        <div class="cli-level-row" id="cliLevelRow">
+          <span class="cli-level-label">Level:</span>
+          <button id="cliLevelEasy" class="action-btn cli-level-btn active" type="button">Easy</button>
+          <button id="cliLevelMedium" class="action-btn cli-level-btn" type="button">Medium</button>
+          <button id="cliLevelHard" class="action-btn cli-level-btn" type="button">Hard</button>
+        </div>
       <div class="cli-help" id="cliHelp" style="display:none">
         <strong>How the CLI Lab works</strong>
         <ul>
@@ -376,6 +387,7 @@
           <li>Navigate with <strong>Prev / Next</strong>, or <strong>Shuffle</strong> to randomize the deck.</li>
           <li><strong>Study Mode</strong> shows prompt + answer + explanation without typing — good for memorizing.</li>
           <li><strong>All Commands</strong> opens a searchable list of every command in the deck.</li>
+          <li><strong>Level</strong> filters the deck: <strong>Easy</strong> = common Linux/CLI + basic Cisco exec commands, <strong>Medium</strong> = intermediate, <strong>Hard</strong> = everything else. Easy is the default.</li>
         </ul>
       </div>
       <div class="cli-list-panel" id="cliListPanel" style="display:none">
@@ -574,6 +586,13 @@
         <select class="concept-select" id="diagTopic" aria-label="Filter diagnosis by topic"></select>
         <button class="trans-btn" id="diagModeBtn" type="button" title="Show or hide the show-command column">Hide Commands</button>
         <button class="action-btn primary" id="diagPracticeBtn" type="button">▶ Practice Commands</button>
+      </div>
+      <div class="diag-pager" id="diagPager" style="display:none">
+        <span class="diag-pager-info" id="diagPagerInfo"></span>
+        <span class="diag-pager-btns">
+          <button class="trans-btn" id="diagPrevBtn" type="button" aria-label="Previous page">◀ Prev</button>
+          <button class="trans-btn" id="diagNextBtn" type="button" aria-label="Next page">Next ▶</button>
+        </span>
       </div>
       <div id="diagPractice" style="display:none">
         <div class="flash-progress">
