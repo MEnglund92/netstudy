@@ -251,14 +251,9 @@ body.light-mode .tab.active { animation: none; background: var(--tag-color); col
 /* --- 6. TAB PANELS --- */
 .tab-container { position: relative; }
 .tab-panel {
-  opacity: 0;
-  transition: opacity .35s ease, transform .35s cubic-bezier(.22,1,.36,1);
-  position: absolute;
-  pointer-events: none;
-  width: 100%;
-  transform: translateY(10px);
+  display: none;
 }
-.tab-panel.active { opacity: 1; position: relative; pointer-events: auto; transform: translateY(0); }
+.tab-panel.active { display: block; position: relative; animation: tabFade .35s cubic-bezier(.22,1,.36,1) both; }
 
 /* --- 7. SHARED COMPONENTS --- */
 .search-box {
@@ -1338,6 +1333,7 @@ body.light-mode .bar-fill { animation: none; background: var(--tag-color); }
 }
 
 /* --- 18. KEYFRAME ANIMATIONS --- */
+@keyframes tabFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
