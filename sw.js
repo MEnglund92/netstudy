@@ -1,15 +1,17 @@
-const CACHE = 'netstudy-v21';
-const DATA_CACHE = 'netstudy-data-v1';
+const CACHE = 'netstudy-v22';
+const DATA_CACHE = 'netstudy-data-v2';
 const FILES = [
   '.',
   'index.html',
-  'style.css',
-  'recall.css',
-  'app.js',
-  'study.js',
-  'labs.js',
-  'statsbar.js',
+  'css/style.css',
+  'css/recall.css',
+  'js/app.js',
+  'js/study.js',
+  'js/labs.js',
+  'js/statsbar.js',
+  'js/sw-register.js',
   'manifest.json',
+  'data/resources.js',
   'data/ccna_glossary_data.js',
   'data/ccna_concepts.js',
   'fonts/inter-400.woff2',
