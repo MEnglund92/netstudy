@@ -1,4 +1,4 @@
-﻿(function() {
+(function() {
   'use strict';
 
   if (!window.appData) {
@@ -222,7 +222,7 @@ function renderBrowse(){
   }
   document.getElementById('countLabel').textContent = 'Showing '+items.length+' items';
   if(!items.length){
-    document.getElementById('cardGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“­</div><div class="empty-text">No items found</div><div class="empty-sub">Add some data to get started</div></div>';
+    document.getElementById('cardGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No items found</div><div class="empty-sub">Add some data to get started</div></div>';
     return;
   }
   document.getElementById('cardGrid').innerHTML = pageItems.map(i=>{
@@ -230,9 +230,9 @@ function renderBrowse(){
     const showInit = 'style="display:none"';
     const svDef = i.translationSv || i.translation;
     return '<div class="vocab-card">'+
-      '<div class="phrase">'+i.phrase+'<button class="speak-btn card-speak" data-text="'+i.phrase.replace(/"/g,'&quot;')+'" type="button" title="Pronounce phrase" aria-label="Pronounce phrase">ðŸ”Š</button></div>'+
+      '<div class="phrase">'+i.phrase+'<button class="speak-btn card-speak" data-text="'+i.phrase.replace(/"/g,'&quot;')+'" type="button" title="Pronounce phrase" aria-label="Pronounce phrase">🔊</button></div>'+
       '<span class="cat-tag" style="background:'+color+'22;color:'+color+'">'+getCatName(i.category)+'</span>'+
-      '<div class="meaning">'+i.meaning+'<button class="speak-btn card-speak" data-text="'+i.meaning.replace(/"/g,'&quot;')+'" type="button" title="Pronounce meaning" aria-label="Pronounce meaning">ðŸ”Š</button></div>'+
+      '<div class="meaning">'+i.meaning+'<button class="speak-btn card-speak" data-text="'+i.meaning.replace(/"/g,'&quot;')+'" type="button" title="Pronounce meaning" aria-label="Pronounce meaning">🔊</button></div>'+
       '<div class="translation" style="display:none"><strong>'+i.translation+'</strong> &mdash; '+svDef+'</div>'+
       '<button class="card-trans-btn" onclick="var d=this.previousElementSibling;d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.textContent=d.style.display===\'block\'?\'Hide Translation\':\'Translate\'">Translate</button>'+
     '</div>';
@@ -299,12 +299,12 @@ function rebuildFlashOrder(){
 function renderFlash(){
   const data = getActiveData();
   if(!data.length){
-    document.getElementById('flashWrapper').innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸƒ</div><div class="empty-text">No flashcards available</div><div class="empty-sub">Add some data to start studying</div></div>';
+    document.getElementById('flashWrapper').innerHTML = '<div class="empty-state"><div class="empty-icon">🃏</div><div class="empty-text">No flashcards available</div><div class="empty-sub">Add some data to start studying</div></div>';
     return;
   }
   if(!flashOrder.length) rebuildFlashOrder();
   if(flashIdx >= flashOrder.length) flashIdx = 0;
-  if(!flashOrder.length){ document.getElementById('flashWrapper').innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸƒ</div><div class="empty-text">No cards match the selected category</div></div>'; return; }
+  if(!flashOrder.length){ document.getElementById('flashWrapper').innerHTML = '<div class="empty-state"><div class="empty-icon">🃏</div><div class="empty-text">No cards match the selected category</div></div>'; return; }
   const item = data[flashOrder[flashIdx]];
   document.getElementById('fPhrase').textContent = item.phrase;
   document.getElementById('fCategory').textContent = getCatName(item.category);
@@ -458,14 +458,14 @@ function quizLabel(){
 function initQuiz(){
   const rawData = getActiveData().filter(isPlayableEntry);
   if(!rawData.length){
-    document.getElementById('quizArea').innerHTML = '<div class="empty-state"><div class="empty-icon">â“</div><div class="empty-text">No quiz data available</div><div class="empty-sub">Add some data to start quizzing</div></div>';
+    document.getElementById('quizArea').innerHTML = '<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-text">No quiz data available</div><div class="empty-sub">Add some data to start quizzing</div></div>';
     document.getElementById('quizResult').style.display='none';
     return;
   }
   const quizCat = document.getElementById('quizCategory').value;
   const data = quizCat==='all' ? rawData : rawData.filter(e=>e.category===quizCat);
   if(!data.length){
-    document.getElementById('quizArea').innerHTML = '<div class="empty-state"><div class="empty-icon">â“</div><div class="empty-text">No quiz data available for this category</div><div class="empty-sub">Choose a different category</div></div>';
+    document.getElementById('quizArea').innerHTML = '<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-text">No quiz data available for this category</div><div class="empty-sub">Choose a different category</div></div>';
     document.getElementById('quizResult').style.display='none';
     return;
   }
@@ -499,7 +499,7 @@ function renderQuiz(){
   const letters = ['A','B','C','D'];
 
   if(quizTypeMode){
-    container.innerHTML = '<div class="quiz-type-wrap"><input id="quizTypeInput" type="text" placeholder="'+escapeHtml(quizReverse?'Type the phraseâ€¦':'Type the meaningâ€¦')+'" autocomplete="off"            autocapitalize="off" spellcheck="false"><button id="quizTypeSubmit" class="action-btn primary"                       type="button">Submit</button></div><div class="quiz-type-result" id="quizTypeResult"></div>';
+    container.innerHTML = '<div class="quiz-type-wrap"><input id="quizTypeInput" type="text" placeholder="'+escapeHtml(quizReverse?'Type the phrase…':'Type the meaning…')+'" autocomplete="off"            autocapitalize="off" spellcheck="false"><button id="quizTypeSubmit" class="action-btn primary"                       type="button">Submit</button></div><div class="quiz-type-result" id="quizTypeResult"></div>';
     const input = document.getElementById('quizTypeInput');
     const submit = document.getElementById('quizTypeSubmit');
     const checkType = ()=>{
@@ -512,12 +512,12 @@ function renderQuiz(){
       if(normalizeAnswer(input.value)===normalizeAnswer(correct)){
         quizScore++;
         resultEl.className = 'quiz-type-result correct';
-        resultEl.textContent = 'âœ“ Correct!';
+        resultEl.textContent = '✓ Correct!';
         const r = submit.getBoundingClientRect(); burstConfetti(r.left+r.width/2,r.top+r.height/2);
       }else{
         quizMistakes.push({phrase:item.phrase,meaning:item.meaning,translation:item.translation,translationSv:item.translationSv});
         resultEl.className = 'quiz-type-result wrong';
-        resultEl.innerHTML = 'âœ— Correct answer: <strong>'+escapeHtml(correct)+'</strong>';
+        resultEl.innerHTML = '✗ Correct answer: <strong>'+escapeHtml(correct)+'</strong>';
       }
       document.getElementById('quizNext').disabled = false;
     };
@@ -564,7 +564,7 @@ function showQuizResult(){
   document.getElementById('quizMsg').textContent = getScoreMessage(pct);
   const reviewEl = document.getElementById('quizReview');
   if(quizMistakes.length){
-    reviewEl.innerHTML = '<div class="review-title">ðŸ“ Review Mistakes ('+quizMistakes.length+')</div>'+
+    reviewEl.innerHTML = '<div class="review-title">📝 Review Mistakes ('+quizMistakes.length+')</div>'+
       quizMistakes.map(m=>'<div class="review-card"><div class="r-phrase">'+m.phrase+'</div><div class="r-meaning">'+m.meaning+'</div><div class="r-translation">'+m.translation+'</div></div>').join('');
   } else {
     reviewEl.innerHTML = '';
@@ -623,7 +623,7 @@ function getMatchData(){
 function initMatch(){
   const data = getMatchData();
   if(!data.length){
-    document.getElementById('matchGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">ðŸŽ¯</div><div class="empty-text">No match data available</div><div class="empty-sub">Add some data to play the matching game</div></div>';
+    document.getElementById('matchGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎯</div><div class="empty-text">No match data available</div><div class="empty-sub">Add some data to play the matching game</div></div>';
     document.getElementById('matchStatus').textContent = '';
     document.getElementById('matchResult').classList.remove('show');
     return;
@@ -699,7 +699,7 @@ function handleMatchClick(side,idx,id){
     } else {
       matchWrong = {li,ri};
       const st = document.getElementById('matchStatus');
-      st.textContent = 'âœ— Wrong pair â€” try again';
+      st.textContent = '✗ Wrong pair — try again';
       st.className = 'match-status match-status-wrong';
       if(matchWrongTimer) clearTimeout(matchWrongTimer);
       matchWrongTimer = setTimeout(()=>{
@@ -720,7 +720,7 @@ let examQueue = []; let examIdx = 0; let examAnswers = []; let examTimer = null;
 function updateExamCourseSel(){
   const sel = document.getElementById('examCourse');
   if(!sel) return;
-  sel.innerHTML = '<option value="-1">Mixed â€” All Courses</option>'+courses.map((c,i)=>'<option value="'+i+'">'+c.name+'</option>').join('');
+  sel.innerHTML = '<option value="-1">Mixed — All Courses</option>'+courses.map((c,i)=>'<option value="'+i+'">'+c.name+'</option>').join('');
   sel.addEventListener('change',updateExamCategorySel);
 }
 function updateExamCategorySel(){
@@ -773,7 +773,7 @@ function startGlossaryExam(){
     examTimeLeft--;
     const m = Math.floor(examTimeLeft/60), s = examTimeLeft%60;
     const el = document.getElementById('examTimer');
-    el.textContent = 'â± '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.textContent = '⏱ '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
     el.className = 'exam-timer';
     if(examTimeLeft<=60) el.classList.add('critical');
     else if(examTimeLeft<=300) el.classList.add('warning');
@@ -798,7 +798,7 @@ function showExamQuestion(){
   document.querySelectorAll('#examOptions input[name="examOpt"]').forEach(r=>{
     r.addEventListener('change',()=>{ examAnswers[examIdx] = parseInt(r.value,10); });
   });
-  document.getElementById('examNext').textContent = examIdx===examQueue.length-1 ? 'Finish â–¶' : 'Next â–¶';
+  document.getElementById('examNext').textContent = examIdx===examQueue.length-1 ? 'Finish ▶' : 'Next ▶';
 }
 document.getElementById('examPrev').addEventListener('click',()=>{ if(examIdx>0){ examIdx--; showExamQuestion(); } });
 document.getElementById('examNext').addEventListener('click',()=>{
@@ -849,7 +849,7 @@ function submitGlossaryExam(){
     const chosenText = r.ans!==null ? q.options[r.ans] : null;
     return '<div class="review-card'+(r.ok?'':' review-wrong')+'">'+
       '<div class="r-phrase">'+(i+1)+'. '+escapeHtml(q.question)+'</div>'+
-      '<div class="r-meaning">'+(r.ok?'âœ“ Your answer: ':'âœ— Your answer: ')+(chosenText?escapeHtml(chosenText.text):'<em>not answered</em>')+'</div>'+
+      '<div class="r-meaning">'+(r.ok?'✓ Your answer: ':'✗ Your answer: ')+(chosenText?escapeHtml(chosenText.text):'<em>not answered</em>')+'</div>'+
       (r.ok?'':'<div class="r-translation">Correct: <strong>'+escapeHtml(correctText?correctText.text:'')+'</strong></div>')+
       '<div class="r-translation">'+escapeHtml(q.translation||'')+'</div>'+
     '</div>';
